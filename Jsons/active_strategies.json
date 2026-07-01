@@ -1,0 +1,34 @@
+{
+    "GAP4": {
+        "file_path": "C:/Users/alire/OneDrive/Desktop/Roadmap_ENGINES/Shared_Modules/Strategies_Class.py",
+        "params": {
+            "ALLOWED_DAYS": null,
+            "KILLZONES": null
+        },
+        "config": {
+            "symbol": "XAUUSD",
+            "magic_number": 777898,
+            "timeframe": "M5",
+            "lookback": 500,
+            "point_value": 1,
+            "adjustment_pips": 0,
+            "candle_type": "STANDARD",
+            "contract_size": null,
+            "allowed_days": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+            ],
+            "killzones": [
+                "10:00-03:00",
+                "07:00-13:00"
+            ],
+            "TIMEFRAME_SECONDS": 300,
+            "risk_value": "050"
+        }
+    }
+}

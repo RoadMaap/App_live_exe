@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 // --- کامپوننت اختصاصی دراپ‌داون ---
 const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
+    const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -60,12 +62,13 @@ const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
 };
 
 const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
+    const { t } = useLanguage();
     const [isLoading, setIsLoading] = useState(false);
     const [expandedStrategies, setExpandedStrategies] = useState([]);
 
     // --- Helper Functions ---
     const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayLabels = [t('day_mon'), t('day_tue'), t('day_wed'), t('day_thu'), t('day_fri'), t('day_sat'), t('day_sun')];
 
     // نگاشت تایم‌فریم به ثانیه
     const timeframeToSeconds = {
@@ -225,24 +228,24 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
     const strategyList = Object.entries(strategies);
 
     const timeframeOptions = [
-        { label: 'M1 - 1 Minute', value: 'M1' },
-        { label: 'M5 - 5 Minutes', value: 'M5' },
-        { label: 'M15 - 15 Minutes', value: 'M15' },
+        { label: t('timeframe_m1'), value: 'M1' },
+        { label: t('timeframe_m5'), value: 'M5' },
+        { label: t('timeframe_m15'), value: 'M15' },
         { label: 'M30 - 30 Minutes', value: 'M30' },
-        { label: 'H1 - 1 Hour', value: 'H1' },
-        { label: 'H4 - 4 Hours', value: 'H4' },
-        { label: 'D1 - Daily', value: 'D1' },
+        { label: t('timeframe_h1'), value: 'H1' },
+        { label: t('timeframe_h4'), value: 'H4' },
+        { label: t('timeframe_d1'), value: 'D1' },
     ];
 
     const candleOptions = [
-        { label: 'Standard Candles', value: 'STANDARD' },
-        { label: 'Heikin Ashi', value: 'HEIKIN_ASHI' },
+        { label: t('candle_standard'), value: 'STANDARD' },
+        { label: t('candle_heikin'), value: 'HEIKIN_ASHI' },
     ];
 
     const riskModeOptions = [
-        { label: 'Fixed USD Risk', value: 'fixed_usd' },
-        { label: 'Fixed Lot Size', value: 'fixed_lot' },
-        { label: 'Percentage Risk', value: 'percentage' },
+        { label: t('risk_fixed_usd'), value: 'fixed_usd' },
+        { label: t('risk_fixed_lot'), value: 'fixed_lot' },
+        { label: t('risk_percent'), value: 'percentage' },
     ];
 
     return (
@@ -256,13 +259,13 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                         <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                     </div>
                     <div>
-                        <h1 className="text-white font-bold text-lg tracking-tight">Strategy Management</h1>
-                        <p className="text-xs text-zinc-500 font-medium">Configure trading algorithms & execution rules</p>
+                        <h1 className="text-white font-bold text-lg tracking-tight">{t('strategy_management')}</h1>
+                        <p className="text-xs text-zinc-500 font-medium">{t('strategy_config_subtitle')}</p>
                     </div>
                 </div>
                 <button onClick={handleImport} disabled={isLoading} className="relative z-10 bg-white text-black hover:bg-zinc-200 px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xl active:scale-95 flex items-center gap-2">
                     {isLoading ? (<svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : (<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>)}
-                    Import Strategy
+                    {t('import_strategy')}
                 </button>
             </div>
 
@@ -270,8 +273,8 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
             <div className="flex-1 overflow-y-auto pr-2 custom-scroll space-y-4 pb-4">
                 {strategyList.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-zinc-600 border border-dashed border-zinc-800 rounded-2xl bg-[#0e0e11]">
-                        <p className="text-sm font-medium text-zinc-400">No active strategies found</p>
-                        <p className="text-xs opacity-50 mt-1">Import a Python strategy file to get started</p>
+                        <p className="text-sm font-medium text-zinc-400">{t('no_strategies_found')}</p>
+                        <p className="text-xs opacity-50 mt-1">{t('no_strategies_desc')}</p>
                     </div>
                 ) : (
                     strategyList.map(([name, data]) => {

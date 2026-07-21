@@ -90,15 +90,15 @@ const Login = ({ onLoginSuccess }) => {
                         {t('roadmap')} <span className="text-emerald-500">Pro</span>
                     </h1>
                     <p className="text-xs text-zinc-500 font-medium mb-8 max-w-[260px]">
-                        Professional Algorithmic Trading Terminal
+                        {t('app_subtitle')}
                     </p>
 
                     {/* HWID Section */}
                     <div className="w-full mb-6">
                         <div className="flex justify-between items-center mb-2 px-1">
-                            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Hardware ID</label>
+                            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">{t('hwid_label')}</label>
                             <span className={`text-[9px] font-bold transition-opacity ${statusMsg ? 'opacity-100' : 'opacity-0'} ${statusType === 'error' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                {statusMsg || "Ready"}
+                                {statusMsg || t('ready')}
                             </span>
                         </div>
                         
@@ -132,7 +132,7 @@ const Login = ({ onLoginSuccess }) => {
                             <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         ) : (
                             <>
-                                <span>Verify License</span>
+                                <span>{t('check_login_btn')}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                 </svg>
@@ -148,9 +148,9 @@ const Login = ({ onLoginSuccess }) => {
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                         </span>
-                        <span>Server Online</span>
+                        <span>{t('server_online')}</span>
                     </div>
-                    <span>v2.5.0</span>
+                    <span>{t('version')}</span>
                 </div>
             </div>
         </div>

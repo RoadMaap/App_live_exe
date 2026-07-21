@@ -8,30 +8,35 @@ import subprocess
 import traceback
 import copy
 import ast
+import re  # <-- Essential for bulletproof string parsing
+
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
 # ==============================================================================
-# ایمپورت ماژول‌های پروژه (اصلاح شده بر اساس ساختار پوشه Shared_Modules)
+# Project Module Imports
 # ==============================================================================
 try:
     import MetaTrader5 as mt5
     
-    # ماژول‌های موجود در مسیر اصلی (Root)
+    # Core Engine Modules
     from Multi_live_engine import LiveTrader
     from security import verify_license_online, get_hwid
     from bot_settings import create_symbol_config 
     from strategy_loader import StrategyLoader 
     
-    # ماژول‌های موجود در پوشه Shared_Modules
+    # Shared Modules (Risk & Margin)
     from Shared_Modules.Risk_management_Class import (FixedRiskAmountRule, FixedLotRule, PercentRiskRule, 
                                                       BreakevenHandler, PartialCloseRule)
     
 except ImportError as e:
     print(f"❌ Critical Import Error: {e}")
-    print("⚠️ لطفاً مطمئن شوید که فایل __init__.py داخل پوشه Shared_Modules وجود دارد.")
+    print("⚠️ Please ensure the __init__.py file exists in the Shared_Modules directory.")
     pass
 
 # ==============================================================================
-# تنظیمات پیش‌فرض و متغیرهای گلوبال
+# Global Settings & Defaults
 # ==============================================================================
 
 GLOBAL_SETTINGS_DEFAULTS = {
@@ -43,8 +48,10 @@ GLOBAL_SETTINGS_DEFAULTS = {
     "pc_enabled": False,
     "pc_volume": 50.0,
     "pc_trigger": 2.0,
-    "tl_enabled": False,     # فعال‌ساز قفل تارگت
-    "tl_trigger": 500.0      # تارگت سود بر حسب اکوییتی یا دلار
+    "tl_enabled": False,       # Target Lock toggle
+    "tl_trigger": 10200.0,     # Target Equity value
+    "wu_enabled": True,        # Engine Warm-up toggle
+    "wu_candles": 500          # Candles for pre-calculation
 }
 
 DEFAULT_STRATEGY_CONFIG = {
@@ -61,7 +68,7 @@ DEFAULT_STRATEGY_CONFIG = {
     "TIMEFRAME_SECONDS": 300
 }
 
-JSON_FOLDER = "Jsons"
+JSON_FOLDER = os.path.join(BACKEND_DIR, "Jsons")
 SETTINGS_FILENAME = 'user_settings.json'
 STRATEGIES_FILENAME = 'active_strategies.json'
 
@@ -74,9 +81,10 @@ trade_thread = None
 live_trader_instance = None
 
 # ==============================================================================
-# مدیریت فایل‌های ذخیره‌سازی (JSON)
+# JSON Storage Management
 # ==============================================================================
 def load_settings():
+    """Loads global settings from JSON or creates defaults if missing."""
     if not os.path.exists(SETTINGS_FILE):
         save_settings_to_file(GLOBAL_SETTINGS_DEFAULTS)
         return GLOBAL_SETTINGS_DEFAULTS
@@ -89,6 +97,7 @@ def load_settings():
     except: return GLOBAL_SETTINGS_DEFAULTS
 
 def save_settings_to_file(settings):
+    """Saves global settings to JSON."""
     try:
         if not os.path.exists(JSON_FOLDER): os.makedirs(JSON_FOLDER)
         with open(SETTINGS_FILE, 'w') as f: json.dump(settings, f, indent=4)
@@ -98,6 +107,7 @@ def save_settings_to_file(settings):
         return False
 
 def save_strategies_disk():
+    """Saves active strategies configuration to JSON."""
     data_to_save = {}
     for name, data in strategies_store.items():
         data_to_save[name] = {
@@ -114,6 +124,7 @@ def save_strategies_disk():
         print(f"❌ Error Saving Strategies: {e}")
 
 def load_saved_strategies_disk():
+    """Restores previously saved strategies on startup."""
     global strategies_store
     if not os.path.exists(STRATEGIES_FILE): return
 
@@ -147,7 +158,7 @@ def load_saved_strategies_disk():
         print(f"❌ Error Loading Strategies JSON: {e}")
 
 # ==============================================================================
-# توابع Eel (API Backend)
+# Eel Endpoints (Backend API)
 # ==============================================================================
 
 @eel.expose
@@ -273,7 +284,7 @@ def start_robot():
     global robot_running, trade_thread
     if robot_running: return
     if not strategies_store:
-        eel.update_status('error', 'هیچ استراتژی‌ای بارگذاری نشده است!')
+        eel.update_status('error', 'No strategies loaded. Engine halted.')
         return
     print("▶️ Starting Engine with All Strategies...")
     robot_running = True
@@ -285,27 +296,38 @@ def stop_robot():
     global robot_running
     print("⏹️ Stopping Engine...")
     robot_running = False
-    eel.update_status('warning', 'در حال توقف...')
+    eel.update_status('warning', 'Halting Engine...')
 
+# ==============================================================================
+# Core Trading Engine Thread
+# ==============================================================================
 def run_trading_engine():
     global live_trader_instance, robot_running
     
-    # 1. خواندن تنظیمات ذخیره شده
+    # 1. Read Global Settings
     user_settings = load_settings()
     mt5_path = user_settings.get("mt5_path")
     
+    # Risk parameters
     global_be_enabled = user_settings.get('be_enabled', False)
-    global_be_trigger = user_settings.get('be_trigger', 1.0)
+    global_be_trigger = float(user_settings.get('be_trigger', 1.0))
     global_pc_enabled = user_settings.get('pc_enabled', False)
-    global_pc_vol = user_settings.get('pc_volume', 50.0)
-    global_pc_trigger = user_settings.get('pc_trigger', 2.0)
+    global_pc_vol = float(user_settings.get('pc_volume', 50.0))
+    global_pc_trigger = float(user_settings.get('pc_trigger', 2.0))
     
-    # Target Lock
+    # Target Lock parameters
     global_tl_enabled = user_settings.get('tl_enabled', False)
     try:
-        global_tl_trigger = float(user_settings.get('tl_trigger', 50000.0))
-    except:
-        global_tl_trigger = 50000.0
+        global_tl_trigger = float(user_settings.get('tl_trigger', 10200.0))
+    except ValueError:
+        global_tl_trigger = 10200.0
+        
+    # Warm-up parameters
+    global_wu_enabled = user_settings.get('wu_enabled', True)
+    try:
+        global_wu_candles = int(user_settings.get('wu_candles', 500))
+    except ValueError:
+        global_wu_candles = 500
 
     strategy_instances_config = []
     tf_map = {
@@ -330,23 +352,57 @@ def run_trading_engine():
             if global_be_enabled: strat_mm_rules.append(BreakevenHandler(global_be_trigger))
             if global_pc_enabled: strat_mm_rules.append(PartialCloseRule(global_pc_trigger, global_pc_vol/100.0))
 
+            # ==================================================================
+            # BULLETPROOF DATA SANITIZER (Prevents String Fallback Crash)
+            # ==================================================================
+            def sanitize_days_list(raw_val):
+                """Forces any representation of days into a pure list of integers."""
+                try:
+                    if isinstance(raw_val, str):
+                        nums = re.findall(r'\d+', raw_val)
+                        return [int(n) for n in nums if 0 <= int(n) <= 6]
+                    elif isinstance(raw_val, (list, tuple)):
+                        return [int(d) for d in raw_val if str(d).isdigit() and 0 <= int(d) <= 6]
+                except Exception:
+                    pass
+                return [0, 1, 2, 3, 4]
+
+            # Prioritize fetching from params if it exists, fallback to config
+            clean_days = sanitize_days_list(cfg.get('allowed_days', [0, 1, 2, 3, 4]))
+            for k in list(params.keys()):
+                if k.lower() == 'allowed_days':
+                    clean_days = sanitize_days_list(params[k])
+                    break
+            
+            # CRITICAL FIX: Inject clean data back in ALL possible key formats.
+            # This guarantees that Strategy_Class.py finds the correct integer list 
+            # regardless of whether it requests 'allowed_days', 'ALLOWED_DAYS', etc.
+            cfg['allowed_days'] = clean_days
+            params['allowed_days'] = clean_days
+            params['ALLOWED_DAYS'] = clean_days
+            params['Allowed_Days'] = clean_days
+            
+            # Safely handle killzones
+            kz = cfg.get("killzones", [])
+            if isinstance(kz, str):
+                try:
+                    kz = ast.literal_eval(kz)
+                except Exception:
+                    kz = []
+            if not isinstance(kz, list):
+                kz = []
+                
+            cfg['killzones'] = kz
+            params['killzones'] = kz
+            params['KILLZONES'] = kz
+            # ==================================================================
+
             print(f"🛠 Instantiating {name}...")
             strat_instance = cls(params)
             selected_tf = tf_map.get(cfg.get("timeframe", "M5"), mt5.TIMEFRAME_M5)
             
-            # --- شروع بخش ضدگلوله کردن allowed_days ---
-            raw_days = cfg.get("allowed_days", [0, 1, 2, 3, 4])
-            if isinstance(raw_days, str):
-                try:
-                    raw_days = ast.literal_eval(raw_days)
-                except Exception:
-                    raw_days = [0, 1, 2, 3, 4]
-            
-            if isinstance(raw_days, (list, tuple)):
-                clean_days = [int(d) for d in raw_days]
-            else:
-                clean_days = [0, 1, 2, 3, 4]
-            # --- پایان بخش ضدگلوله ---
+            # Use custom Warm-up candles if enabled, else default to lookback
+            final_lookback = global_wu_candles if global_wu_enabled else cfg.get("lookback", 500)
             
             sym_config = create_symbol_config(
                 symbol=cfg["symbol"],
@@ -354,27 +410,28 @@ def run_trading_engine():
                 mm_rules=strat_mm_rules,
                 timeframe_mt5=selected_tf,
                 magic_number=cfg["magic_number"],
-                lookback=cfg["lookback"],
+                lookback=final_lookback,
                 point_value=cfg["point_value"],
                 adjustment_pips=cfg["adjustment_pips"],
                 candle_type=cfg["candle_type"],
                 contract_size=cfg["contract_size"],
-                allowed_days=clean_days, # ارسال دیتای تمیز
+                allowed_days=clean_days, 
                 killzones=cfg.get("killzones", []),
                 custom_seconds=cfg.get("TIMEFRAME_SECONDS", 300)
             )
             strategy_instances_config.append(sym_config)
             print(f"🚀 Prepared Config: {name} on {cfg['symbol']}")
+            
         except Exception as e:
             print(f"❌ Error preparing {name}: {e}")
             traceback.print_exc()
 
     if not strategy_instances_config:
-        eel.update_status('error', 'هیچ کانفیگ سالمی ساخته نشد. ربات متوقف شد.')
+        eel.update_status('error', 'No valid configurations constructed. Engine halted.')
         robot_running = False
         return
 
-    # 2. تزریق Target Lock در تنظیمات سراسری موتور جدید (LiveTrader)
+    # 2. Setup Live Configuration with Target Lock
     LIVE_CONFIG = { 
         "MT5_PATH": mt5_path, 
         "TARGET_LOCK_ENABLED": global_tl_enabled,
@@ -383,61 +440,65 @@ def run_trading_engine():
     }
     
     try:
-        eel.update_status('warning', 'در حال اتصال به متاتریدر...')
+        eel.update_status('warning', 'Initializing MT5 Connection Protocol...')
         if mt5_path and not os.path.exists(mt5_path):
-            eel.update_status('error', 'مسیر فایل متاتریدر یافت نشد!')
+            eel.update_status('error', 'MT5 Terminal path not found!')
             robot_running = False
             return
             
         live_trader_instance = LiveTrader(LIVE_CONFIG)
-        eel.update_status('success', f'موتور با {len(strategy_instances_config)} استراتژی فعال شد')
+        eel.update_status('success', f'Engine Active with {len(strategy_instances_config)} Strategies.')
         
         while robot_running:
             
-            # --- پردازش Target Lock در حلقه اصلی ---
+            # --- Check Equity Target Lock Mechanism ---
             if live_trader_instance.target_lock.check_and_lock(live_trader_instance.mt5_interface):
-                print("🎯 Target Lock Triggered! Shutting down engine.")
-                eel.update_status('success', 'تارگت سود لمس شد! تمامی معاملات بسته و ربات متوقف شد.')
+                print("🎯 Target Lock Triggered! Halting Engine...")
+                eel.update_status('success', 'Target Equity Hit! Positions secured and engine halted.')
                 robot_running = False
                 break
             
-            # مدیریت پوزیشن‌ها و ورودها
+            # --- Primary Execution Loop ---
             live_trader_instance.position_manager.manage_positions()
             live_trader_instance.signal_engine.process_entries()
             
-            # بروزرسانی رابط کاربری (داشبورد)
+            # --- UI Dashboard Updates ---
             if mt5.terminal_info():
                 acc = mt5.account_info()
                 if acc:
                     pos_count = mt5.positions_total()
                     eel.update_dashboard(round(acc.profit, 2), round(acc.equity, 2), pos_count)
+                    
             time.sleep(1)
             
     except Exception as e:
-        print(f"❌ Crash in Engine: {e}")
+        print(f"❌ Engine Crash: {e}")
         traceback.print_exc()
-        eel.update_status('error', f'خطا: {str(e)}')
+        eel.update_status('error', f'Fatal Error: {str(e)}')
     finally:
         robot_running = False
 
 def on_close(page, sockets):
     global robot_running
-    print("❌ Window closed. Exiting...")
+    print("❌ UI Window closed. Terminating process...")
     robot_running = False
     sys.exit()
 
 if __name__ == '__main__':
-    eel.init('web-react/dist') 
+    FRONTEND_DIR = os.path.join(os.path.dirname(BACKEND_DIR), 'frontend', 'dist')
+    eel.init(FRONTEND_DIR) 
     load_saved_strategies_disk()
     MY_PORT = 8989
     START_PAGE = 'index.html' 
     APP_URL = f'http://localhost:{MY_PORT}/{START_PAGE}'
+    
     print(f"🚀 Starting App Mode at {APP_URL}")
     app_flags = ['--window-size=1200,850', '--disable-infobars', '--disable-extensions']
+    
     try:
         eel.start(START_PAGE, mode='edge', port=MY_PORT, size=(1200, 850), close_callback=on_close, cmdline_args=app_flags)
     except Exception as e:
-        print(f"⚠️ App Mode Error: {e}. Trying fallback.")
+        print(f"⚠️ Primary App Mode Failed: {e}. Attempting Fallback...")
         try:
             eel.start(START_PAGE, mode='edge', size=(1200, 850), close_callback=on_close)
         except: pass

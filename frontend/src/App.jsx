@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { LanguageProvider } from './context/LanguageContext';
-import { ThemeProvider } from './context/ThemeContext'; // ✅ اضافه شد
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
@@ -17,9 +16,7 @@ function MainApp() {
 export default function App() {
   return (
     <LanguageProvider>
-      <ThemeProvider> {/* ✅ اضافه شد: کل برنامه داخل تم‌پروايدر قرار گرفت */}
-        <MainApp />
-      </ThemeProvider>
+      <MainApp />
     </LanguageProvider>
   );
 }

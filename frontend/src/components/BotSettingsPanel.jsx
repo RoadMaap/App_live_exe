@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 // کارت تنظیمات تکی برای هر استراتژی
 const StrategyConfigCard = ({ name, config, onSave }) => {
+    const { t } = useLanguage();
     const [localConfig, setLocalConfig] = useState(config);
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -21,7 +23,7 @@ const StrategyConfigCard = ({ name, config, onSave }) => {
 
     // لیست روزهای هفته
     const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayLabels = [t('day_mon'), t('day_tue'), t('day_wed'), t('day_thu'), t('day_fri'), t('day_sat'), t('day_sun')];
 
     const toggleDay = (dayIndex) => {
         setLocalConfig(prev => {
@@ -60,28 +62,28 @@ const StrategyConfigCard = ({ name, config, onSave }) => {
                 <div className="p-4 border-t border-white/5 bg-[#0c0c0e]">
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <div className="space-y-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-bold">Symbol</label>
+                            <label className="text-[9px] text-zinc-500 uppercase font-bold">{t('symbol')}</label>
                             <input type="text" name="symbol" value={localConfig.symbol} onChange={handleChange} className="w-full h-8 bg-zinc-900 border border-white/10 rounded px-2 text-xs text-white uppercase" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-bold">Timeframe</label>
+                            <label className="text-[9px] text-zinc-500 uppercase font-bold">{t('timeframe_m1').split(' -')[0]}</label>
                             <select name="timeframe" value={localConfig.timeframe} onChange={handleChange} className="w-full h-8 bg-zinc-900 border border-white/10 rounded px-2 text-xs text-zinc-300">
                                 <option value="M1">M1</option><option value="M5">M5</option><option value="M15">M15</option>
                                 <option value="M30">M30</option><option value="H1">H1</option><option value="H4">H4</option><option value="D1">D1</option>
                             </select>
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-bold">Magic Number</label>
+                            <label className="text-[9px] text-zinc-500 uppercase font-bold">{t('magic_number')}</label>
                             <input type="number" name="magic_number" value={localConfig.magic_number} onChange={handleChange} className="w-full h-8 bg-zinc-900 border border-white/10 rounded px-2 text-xs text-blue-400 font-mono" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-bold">Candle Type</label>
+                            <label className="text-[9px] text-zinc-500 uppercase font-bold">{t('candle_type')}</label>
                             <select name="candle_type" value={localConfig.candle_type} onChange={handleChange} className="w-full h-8 bg-zinc-900 border border-white/10 rounded px-2 text-xs text-zinc-300">
-                                <option value="STANDARD">Standard</option><option value="HEIKIN_ASHI">Heikin Ashi</option>
+                                <option value="STANDARD">{t('candle_standard')}</option><option value="HEIKIN_ASHI">{t('candle_heikin')}</option>
                             </select>
                         </div>
                         <div className="col-span-2 space-y-1">
-                            <label className="text-[9px] text-zinc-500 uppercase font-bold">Trading Days</label>
+                            <label className="text-[9px] text-zinc-500 uppercase font-bold">{t('trading_days')}</label>
                             <div className="flex flex-wrap gap-1">
                                 {daysOfWeek.map(d => (
                                     <button 
@@ -96,7 +98,7 @@ const StrategyConfigCard = ({ name, config, onSave }) => {
                         </div>
                     </div>
                     <button onClick={handleSaveClick} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-xs font-bold transition-colors">
-                        Apply Changes
+                        {t('apply_changes')}
                     </button>
                 </div>
             )}

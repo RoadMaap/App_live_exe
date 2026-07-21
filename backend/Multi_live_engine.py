@@ -1,7 +1,7 @@
 # ==============================================================================
-# ULTIMATE MULTI LIVE ENGINE (v3.9.0)
-# Ultimate Live Mirror Sync with Dynamic Comments
-# Architecture: Core execution module for Live Trading
+# ULTIMATE MULTI LIVE ENGINE (v3.9.0) - UNIVERSAL ADAPTER MODE
+# Ultimate Live Mirror Sync with Dynamic Comments & Ghost Recovery
+# Architecture: Core execution module for Live Trading (Strict Core Functions)
 # ==============================================================================
 
 import os
@@ -16,8 +16,7 @@ import MetaTrader5 as mt5
 # ==============================================================================
 # 1. SYSTEM PATH INJECTION (Dynamic Routing to Root)
 # ==============================================================================
-# Ensures standalone execution capability and cross-module importing
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
@@ -37,7 +36,7 @@ except ImportError as e:
     print("⚠️ Please ensure the correct architecture is in place:")
     print("   - Shared_Modules/Risk_management_Class.py")
     print("   - Shared_Modules/Margin_usage.py")
-    print("   - Live_Engine/Target_lock.py")
+    print("   - Target_lock.py")
     sys.exit(1)
 
 # ==============================================================================
@@ -45,37 +44,24 @@ except ImportError as e:
 # ==============================================================================
 class MT5Interface:
     def __init__(self, mt5_path=None, max_retries=15, retry_delay_seconds=5):
-        """
-        Initializes the MT5 Interface with a robust Retry Mechanism.
-        Essential for VPS deployments where the network or MT5 login
-        might lag after a system reboot.
-        """
         self.mt5_path = mt5_path
         self._connect_with_retry(max_retries, retry_delay_seconds)
 
     def _connect_with_retry(self, max_retries, retry_delay):
-        """
-        Attempts to establish a stable connection to the broker server.
-        It checks not just if the terminal is open, but if it's logged in.
-        """
         print("\n🔌 [SYSTEM] Initiating MT5 Connection Protocol...")
         
         for attempt in range(1, max_retries + 1):
             print(f"   ⏳ Attempt [{attempt}/{max_retries}]: Binding to MT5 Terminal...")
             
-            # Step 1: Initialize the MT5 Terminal
             init_success = mt5.initialize(path=self.mt5_path) if self.mt5_path else mt5.initialize()
             
             if init_success:
-                # Step 2: Verify active connection to the Broker Server
                 term_info = mt5.terminal_info()
-                
                 if term_info is not None and term_info.connected:
-                    # Step 3: Verify account data is fully loaded
                     acc_info = mt5.account_info()
                     if acc_info is not None:
                         print(f"✅ [SUCCESS] MT5 Connected & Synced! Account: {acc_info.login} | Server: {acc_info.server}")
-                        return  # Connection is stable, exit the retry loop
+                        return 
                     else:
                         print("   ⚠️ Terminal connected, but Account Data is null (Wait for sync).")
                 else:
@@ -83,13 +69,11 @@ class MT5Interface:
             else:
                 print(f"   ❌ Terminal Init Failed. Error Code: {mt5.last_error()}")
             
-            # If we reach here, connection is not fully stable yet
             if attempt < max_retries:
                 print(f"   💤 Retrying in {retry_delay} seconds...\n")
                 os_time.sleep(retry_delay)
                 
-        # If the loop finishes without returning, it's a fatal failure
-        raise ConnectionError("🛑 [FATAL] Could not establish stable MT5 connection after maximum retries. Shutting down engine.")
+        raise ConnectionError("🛑 [FATAL] Could not establish stable MT5 connection after maximum retries.")
 
     def get_account_info(self):
         return mt5.account_info()
@@ -106,24 +90,19 @@ class MT5Interface:
     def normalize_price(self, symbol, price):
         info = self.get_symbol_info(symbol)
         if not info: return price
-        
         tick_size = info.trade_tick_size
         if tick_size == 0: return price
-        
         return round(round(price / tick_size) * tick_size, info.digits)
 
     def normalize_volume(self, symbol, volume):
         info = self.get_symbol_info(symbol)
         if not info: return volume
-        
         step = info.volume_step
         if step == 0: return volume
-        
         vol = round(volume / step + 1e-9) * step
         vol = round(vol, 2)
         vol = max(vol, info.volume_min)
         vol = min(vol, info.volume_max)
-        
         return vol
 
     def get_candles(self, symbol, timeframe, count):
@@ -145,10 +124,6 @@ class MT5Interface:
         return mt5.positions_get()
 
     def send_market_order(self, symbol, order_type, volume, sl, tp, magic, comment):
-        """
-        Sends a market order safely without crashing.
-        Uses FOK by default. Automatically falls back to IOC if the broker rejects it.
-        """
         tick = self.get_symbol_tick(symbol)
         if not tick: return False
         
@@ -175,8 +150,6 @@ class MT5Interface:
         }
         
         res = mt5.order_send(request)
-        
-        # Fallback mechanism: 10030 is TRADE_RETCODE_INVALID_FILL
         if res and res.retcode == 10030:
             request["type_filling"] = mt5.ORDER_FILLING_IOC
             res = mt5.order_send(request)
@@ -191,7 +164,6 @@ class MT5Interface:
     def modify_position(self, ticket, symbol, new_sl, new_tp):
         final_sl = self.normalize_price(symbol, new_sl)
         final_tp = self.normalize_price(symbol, new_tp)
-        
         request = {
             "action": mt5.TRADE_ACTION_SLTP,
             "position": ticket,
@@ -234,8 +206,9 @@ class MT5Interface:
         res = mt5.order_send(request)
         return res.retcode == mt5.TRADE_RETCODE_DONE
 
+
 # ==============================================================================
-# 2. Live Signal Engine (Ultimate Sync Mode)
+# 2. Live Signal Engine (Universal Core Focus)
 # ==============================================================================
 class LiveSignalEngine:
     def __init__(self, mt5_interface, config, margin_manager):
@@ -247,29 +220,32 @@ class LiveSignalEngine:
         self.lockout_until = {s['strategy_id']: pd.Timestamp(0) for s in config['strategy_instances']}
         self.active_recovery_trades = {s['strategy_id']: None for s in config['strategy_instances']}
         
-        # 🚨 Edge detection system for tracking MT5 server exits
         self.known_open_positions = {s['strategy_id']: False for s in config['strategy_instances']}
         
         self.warmup_strategies()
 
     def warmup_strategies(self):
-        print("\n🔥 [WARM-UP PHASE] Syncing 'Sacred Rhythm' (100% Backtest Mirror)...")
+        print("\n🔥 [WARM-UP PHASE] Syncing Engine with Historical Data...")
         
         for s_config in self.config['strategy_instances']:
             strat_id = s_config['strategy_id']
             symbol = s_config['symbol']
             strat = s_config['strategy']
-            
-            strat._reset_state()
-            
+
             lookback = s_config.get('LOOKBACK_PERIOD', 2000)
             df = self.mt5.get_candles(symbol, s_config['TIMEFRAME_MT5'], lookback)
             
             if df is None or len(df) < 5: continue
                 
-            try:
-                df = strat.prepare_indicators(df.copy(), s_config.get('candle_type', 'STANDARD'))
-            except Exception:
+            # CORE FUNCTION: prepare_indicators
+            if hasattr(strat, 'prepare_indicators'):
+                try:
+                    df = strat.prepare_indicators(df.copy(), s_config.get('candle_type', 'STANDARD'))
+                except Exception as e:
+                    print(f"   ❌ Indicator prep failed for {strat_id}: {e}")
+                    continue
+            else:
+                print(f"   ❌ CRITICAL: 'prepare_indicators' method missing in {strat_id}!")
                 continue
 
             print(f"⏳ Fast-forwarding {len(df)} candles for {strat_id}...")
@@ -281,7 +257,7 @@ class LiveSignalEngine:
                 history_slice = df.iloc[:i]
                 current_candle = history_slice.iloc[-1]
                 
-                # 1. Precise position management simulation
+                # Position Management Simulation
                 if virtual_real_position is not None:
                     v_type = virtual_real_position['type']
                     v_sl = virtual_real_position['sl']
@@ -290,18 +266,15 @@ class LiveSignalEngine:
                     is_closed = False
                     exit_reason = ""
                     
-                    # Spread calculation
                     raw_spread = current_candle.get('spread', 0.0)
                     spread_div = s_config.get('spread_divisor', 1.0)
                     point_val = s_config.get('point_value', 1.0)
                     spread_val = (raw_spread / spread_div) * point_val
                     
-                    # Extract candle OHLC for gap detection
                     curr_o = current_candle['open']
                     curr_h = current_candle['high']
                     curr_l = current_candle['low']
                     
-                    # 🚨 Gap slippage simulation logic for Warm-up system 🚨
                     if v_type == 'buy':
                         if curr_o < v_sl: is_closed = True; exit_reason = "SL (Gap Slippage)"
                         elif curr_o > v_tp: is_closed = True; exit_reason = "TP (Positive Gap)"
@@ -323,30 +296,35 @@ class LiveSignalEngine:
                         last_real_trade_log = virtual_real_position.copy()
                         virtual_real_position = None 
                         
+                        # CORE FUNCTION: on_exit (Third Exit)
                         if hasattr(strat, 'on_exit'):
-                            strat.on_exit()
+                            try:
+                                strat.on_exit()
+                            except: pass
                     
                     continue 
                 
-                # 2. Acquire new signal
-                trade_type, ep, sl, tp = strat.check_entry_signal(history_slice)
-                
+                # CORE FUNCTION: check_entry_signal
+                trade_type, ep, sl, tp = None, None, None, None
+                if hasattr(strat, 'check_entry_signal'):
+                    try:
+                        res = strat.check_entry_signal(history_slice)
+                        if isinstance(res, tuple) and len(res) == 4:
+                            trade_type, ep, sl, tp = res
+                    except Exception as e: pass
+
                 if trade_type:
                     virtual_real_position = {
                         'type': trade_type, 'entry_price': ep, 'sl': sl, 'tp': tp, 'entry_time': current_candle.name 
                     }
                     
-            box_high = getattr(strat, 'flat_period_high', 'N/A')
-            sim_state = getattr(strat, 'sim_active', False)
-            pen_state = getattr(strat, 'pending_active', False)
-            
-            print(f"✅ [{strat_id}] Memory Synced! Tracker High: {box_high} | Shadow Active: {sim_state} | Pending Active: {pen_state}")
+            print(f"✅ [{strat_id}] Memory Synced Successfully!")
             
             if virtual_real_position is not None:
                 vr = virtual_real_position
                 print(f"   💎 [OPEN REAL]     : {vr['type'].upper():<4} | Entry: {vr['entry_price']} | SL: {vr['sl']} | TP: {vr['tp']} | Opened: {vr['entry_time']} 🔴(STILL RUNNING!)")
                 self.active_recovery_trades[strat_id] = vr
-                self.known_open_positions[strat_id] = True # Register open position
+                self.known_open_positions[strat_id] = True 
             elif last_real_trade_log is not None:
                 lr = last_real_trade_log
                 print(f"   💎 [CLOSED REAL]   : {lr['type'].upper():<4} | Closed: {lr['exit_time']} (Hit {lr['exit_reason']})")
@@ -368,15 +346,16 @@ class LiveSignalEngine:
         strat_id = s_config['strategy_id']
         symbol = s_config['symbol']
         magic = s_config['magic_number']
+        strat = s_config['strategy']
 
         open_positions = self.mt5.get_open_positions()
         has_open_position = any(p.magic == magic for p in open_positions) if open_positions else False
 
-        # 🚨 [FIX 3]: Live closure detection by MT5 (Edge Detection) 🚨
         if self.known_open_positions.get(strat_id, False) and not has_open_position:
             print(f"🔔 [LIVE DETECT] Broker closed position for {strat_id}. Injecting on_exit() rhythm hook.")
-            if hasattr(s_config['strategy'], 'on_exit'):
-                s_config['strategy'].on_exit()
+            if hasattr(strat, 'on_exit'):
+                try: strat.on_exit()
+                except: pass
         
         self.known_open_positions[strat_id] = has_open_position
 
@@ -428,22 +407,28 @@ class LiveSignalEngine:
                     if res and res.retcode == mt5_lib.TRADE_RETCODE_DONE:
                         print(f"👻 [RECOVERY CANCELLED] Market hit TP. Zombie Order KILLED!")
                         self.active_recovery_trades[strat_id] = None
-                        if hasattr(s_config['strategy'], 'on_exit'): s_config['strategy'].on_exit() # 🚨
+                        if hasattr(strat, 'on_exit'): 
+                            try: strat.on_exit() 
+                            except: pass
                     else:
                         retries = recovery_trade.get('delete_retries', 0)
                         if retries < 1: 
-                            print(f"⚠️ [WARNING] Failed to kill Pending Order (Retcode: {res.retcode if res else 'None'}). Retrying in 10s...")
+                            print(f"⚠️ [WARNING] Failed to kill Pending Order. Retrying in 10s...")
                             recovery_trade['delete_retries'] = retries + 1
                             recovery_trade['delete_retry_time'] = current_time + pd.Timedelta(seconds=10)
                             return 
                         else: 
                             print(f"❌ [CRITICAL] 2nd attempt failed. Killing Ghost Memory. CHECK MT5 MANUALLY!")
                             self.active_recovery_trades[strat_id] = None
-                            if hasattr(s_config['strategy'], 'on_exit'): s_config['strategy'].on_exit() # 🚨
+                            if hasattr(strat, 'on_exit'): 
+                                try: strat.on_exit() 
+                                except: pass
                 else:
                     print(f"👻 [RECOVERY CANCELLED] Market hit TP. Rhythm Unlocked!")
                     self.active_recovery_trades[strat_id] = None
-                    if hasattr(s_config['strategy'], 'on_exit'): s_config['strategy'].on_exit() # 🚨
+                    if hasattr(strat, 'on_exit'): 
+                        try: strat.on_exit() 
+                        except: pass
 
             else:
                 if not has_pending:
@@ -454,6 +439,8 @@ class LiveSignalEngine:
                     df_recovery = self.mt5.get_candles(symbol, s_config['TIMEFRAME_MT5'], s_config.get('LOOKBACK_PERIOD', 100))
                     if df_recovery is not None:
                         try:
+                            if hasattr(strat, 'prepare_indicators'):
+                                df_recovery = strat.prepare_indicators(df_recovery, s_config.get('candle_type', 'STANDARD'))
                             for rule in s_config.get('MONEY_MANAGEMENT_MODE', []):
                                 if hasattr(rule, 'prepare_indicators'): df_recovery = rule.prepare_indicators(df_recovery)
                         except Exception: pass
@@ -492,12 +479,19 @@ class LiveSignalEngine:
         if df is None: return
 
         try:
-            df = s_config['strategy'].prepare_indicators(df.copy(), s_config.get('candle_type', 'STANDARD'))
+            if hasattr(strat, 'prepare_indicators'):
+                df = strat.prepare_indicators(df.copy(), s_config.get('candle_type', 'STANDARD'))
             for rule in s_config.get('MONEY_MANAGEMENT_MODE', []):
                 if hasattr(rule, 'prepare_indicators'): df = rule.prepare_indicators(df)
-        except Exception as e: return
+        except Exception: return
 
-        trade_type, entry_anchor, sl_anchor, tp_anchor = s_config['strategy'].check_entry_signal(df)
+        trade_type, entry_anchor, sl_anchor, tp_anchor = None, None, None, None
+        if hasattr(strat, 'check_entry_signal'):
+            try:
+                res = strat.check_entry_signal(df)
+                if isinstance(res, tuple) and len(res) == 4:
+                    trade_type, entry_anchor, sl_anchor, tp_anchor = res
+            except Exception: pass
 
         if trade_type:
             if pd.Timestamp.now() < self.lockout_until[strat_id]: 
@@ -529,7 +523,6 @@ class LiveSignalEngine:
                 tag = "🔥 [DISCOUNT RECOVERY]" if is_recovery else "💎 Signal Confirmed"
                 print(f"{tag} | {symbol} {trade_type.upper()} | Vol: {final_lot} | Margin: ${trade_margin:.2f}")
                 
-                # Generates dynamic comments: e.g., "US30-GAP4" or "XAUUSD-Ghost"
                 order_comment = f"{symbol}-Ghost" if is_recovery else f"{symbol}-GAP4"
                 
                 success = self.mt5.send_market_order(
@@ -566,8 +559,6 @@ class LiveSignalEngine:
             if final_lot > 0:
                 print(f"🎣 [MT5 LIMIT PLACED] Waiting for Pullback on Broker Server: {calc_entry} | Vol: {final_lot}")
                 mt5_type = mt5_lib.ORDER_TYPE_BUY_LIMIT if trade_type == 'buy' else mt5_lib.ORDER_TYPE_SELL_LIMIT
-                
-                # Dynamically assign limit order comment while respecting MT5 char limit
                 limit_comment = f"{symbol}-GLimit"
                 
                 request = {
@@ -604,6 +595,7 @@ class LiveSignalEngine:
                     if isinstance(res, list): lot = res[0].get('lot_size', lot)
                     elif isinstance(res, dict): lot = res.get('lot_size', lot)
         return lot
+
 
 # ==============================================================================
 # 3. Live Position Manager
@@ -656,6 +648,7 @@ class LivePositionManager:
         
         closed_candle = df.iloc[-2] 
         current_candle = df.iloc[-1] 
+        strat = s_config['strategy']
 
         risk_rules = s_config.get('MONEY_MANAGEMENT_MODE', [])
         if not isinstance(risk_rules, list): risk_rules = [risk_rules]
@@ -680,10 +673,19 @@ class LivePositionManager:
                         if norm_sl != mt5_pos.sl:
                              self.mt5.modify_position(mt5_pos.ticket, mt5_pos.symbol, norm_sl, mt5_pos.tp)
 
-        if hasattr(s_config['strategy'], 'check_exit_conditions'):
-             exit_price, reason = s_config['strategy'].check_exit_conditions(current_candle, df, pos_dict)
-             if exit_price:
-                 self._execute_full_close(mt5_pos, exit_price, reason)
+        # CORE FUNCTION: check_exit_conditions
+        if hasattr(strat, 'check_exit_conditions'):
+            try:
+                res = strat.check_exit_conditions(current_candle, df, pos_dict)
+                if isinstance(res, tuple) and len(res) == 2:
+                    exit_price, reason = res
+                else:
+                    exit_price, reason = res, "Strategy Custom Exit"
+                    
+                if exit_price:
+                    self._execute_full_close(mt5_pos, exit_price, reason)
+            except Exception as e:
+                pass
 
     def _execute_partial(self, mt5_pos, vol):
         tick = self.mt5.get_symbol_tick(mt5_pos.symbol)
@@ -692,28 +694,34 @@ class LivePositionManager:
         self.mt5.close_partial(mt5_pos.ticket, mt5_pos.symbol, vol, type_c, price)
 
     def _execute_full_close(self, mt5_pos, price, reason):
-        tick = self.mt5.get_symbol_tick(mt5_pos.symbol)
-        real_price = tick.bid if mt5_pos.type == 0 else tick.ask
+        if not isinstance(price, (int, float)):
+            tick = self.mt5.get_symbol_tick(mt5_pos.symbol)
+            price = tick.bid if mt5_pos.type == 0 else tick.ask
+            
         type_c = 1 if mt5_pos.type == 0 else 0
-        self.mt5.close_full(mt5_pos.ticket, mt5_pos.symbol, mt5_pos.volume, type_c, real_price, reason)
+        self.mt5.close_full(mt5_pos.ticket, mt5_pos.symbol, mt5_pos.volume, type_c, price, str(reason))
 
     def _get_fresh_data(self, s_config):
         df = self.mt5.get_candles(s_config['symbol'], s_config['TIMEFRAME_MT5'], s_config.get('LOOKBACK_PERIOD', 100))
         if df is None or len(df) < 2: return None
         try:
-            df = s_config['strategy'].prepare_indicators(df, s_config.get('candle_type', 'STANDARD'))
+            strat = s_config['strategy']
+            if hasattr(strat, 'prepare_indicators'):
+                df = strat.prepare_indicators(df, s_config.get('candle_type', 'STANDARD'))
+                
             for rule in s_config.get('MONEY_MANAGEMENT_MODE', []):
                 if hasattr(rule, 'prepare_indicators'): df = rule.prepare_indicators(df)
             return df
         except: return None
 
+
 # ==============================================================================
-# 4. Live Trader
+# 4. Live Trader Main Engine Call
 # ==============================================================================
 class LiveTrader:
     def __init__(self, config):
         self.config = config
-        print(f"🚀 Initializing Live Trader V3.9 (Ultimate Mirror Sync Architecture)...")
+        print(f"🚀 Initializing Live Trader V3.9 (Universal Adapter Architecture)...")
         self.mt5_interface = MT5Interface(config.get("MT5_PATH"))
         
         acc_info = self.mt5_interface.get_account_info()
@@ -721,7 +729,7 @@ class LiveTrader:
             config['leverage'] = float(acc_info.leverage)
         
         self.margin_manager = MarginManager(config)
-        self.target_lock = TargetLockManager(config)  # <--- رجیستر کردن سیستم
+        self.target_lock = TargetLockManager(config)  
         self.signal_engine = LiveSignalEngine(self.mt5_interface, config, self.margin_manager)
         self.position_manager = LivePositionManager(self.mt5_interface, config)
 
@@ -729,7 +737,6 @@ class LiveTrader:
         print("🟢 Bot is Active and Listening to the Market...")
         while True:
             try:
-                
                 if self.target_lock.check_and_lock(self.mt5_interface):
                     mt5.shutdown()
                     break

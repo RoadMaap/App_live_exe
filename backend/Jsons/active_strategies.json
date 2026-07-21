@@ -1,9 +1,14 @@
 {
-    "GAP4": {
-        "file_path": "C:/Users/alire/OneDrive/Desktop/Roadmap_ENGINES/Shared_Modules/Strategies_Class.py",
+    "ADXStrategy": {
+        "file_path": "C:/Users/alire/OneDrive/Desktop/ENGINES_ver3.8/LIVE_ENGINE V3.8/Strategies_Final_V3.py",
         "params": {
-            "ALLOWED_DAYS": null,
-            "KILLZONES": null
+            "BB_PERIOD": 0,
+            "BB_STD_DEV": 0,
+            "ADX_PERIOD": 0,
+            "ATR_PERIOD": 0,
+            "ADX_THRESHOLD": 0,
+            "ATR_MULTIPLIER": 0,
+            "RISK_REWARD_RATIO": 0
         },
         "config": {
             "symbol": "XAUUSD",
@@ -19,16 +24,130 @@
                 1,
                 2,
                 3,
-                4,
-                5,
-                6
+                4
             ],
-            "killzones": [
-                "10:00-03:00",
-                "07:00-13:00"
-            ],
+            "killzones": [],
             "TIMEFRAME_SECONDS": 300,
-            "risk_value": "050"
+            "risk_value": "",
+            "risk_mode": "fixed_usd"
+        }
+    },
+    "FAST_TRADER_FORTEST": {
+        "file_path": "C:/Users/alire/OneDrive/Desktop/ENGINES_ver3.8/LIVE_ENGINE V3.8/Strategies_Final_V3.py",
+        "params": {
+            "EMA_FAST_LEN": 5,
+            "EMA_SLOW_LEN": 10,
+            "MIN_LOOKBACK": 12,
+            "RISK_REWARD_RATIO": 1
+        },
+        "config": {
+            "symbol": "XAUUSD",
+            "magic_number": 777998,
+            "timeframe": "M5",
+            "lookback": 500,
+            "point_value": 1,
+            "adjustment_pips": 0,
+            "candle_type": "STANDARD",
+            "contract_size": null,
+            "allowed_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "killzones": [],
+            "TIMEFRAME_SECONDS": 300
+        }
+    },
+    "QuantSetupStrategy": {
+        "file_path": "C:/Users/alire/OneDrive/Desktop/ENGINES_ver3.8/LIVE_ENGINE V3.8/Strategies_Final_V3.py",
+        "params": {
+            "RISK_REWARD_RATIO": 0,
+            "atr_period": 0,
+            "atr_multiplier": 0,
+            "vol_ma_period": 0
+        },
+        "config": {
+            "symbol": "XAUUSD",
+            "magic_number": 778098,
+            "timeframe": "M5",
+            "lookback": 500,
+            "point_value": 1.0,
+            "adjustment_pips": 0,
+            "candle_type": "STANDARD",
+            "contract_size": null,
+            "allowed_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "killzones": [],
+            "TIMEFRAME_SECONDS": 300
+        }
+    },
+    "SqueezeBreakoutStrategy": {
+        "file_path": "C:/Users/alire/OneDrive/Desktop/ENGINES_ver3.8/LIVE_ENGINE V3.8/Strategies_Final_V3.py",
+        "params": {
+            "BB_PERIOD": 0,
+            "BB_STD": 0,
+            "KC_PERIOD": 0,
+            "KC_ATR_MULT": 0,
+            "EMA_PERIOD": 0,
+            "ATR_PERIOD": 0,
+            "SL_ATR_MULT": 0,
+            "RISK_REWARD_RATIO": 0
+        },
+        "config": {
+            "symbol": "XAUUSD",
+            "magic_number": 778198,
+            "timeframe": "M5",
+            "lookback": 500,
+            "point_value": 1.0,
+            "adjustment_pips": 0,
+            "candle_type": "STANDARD",
+            "contract_size": null,
+            "allowed_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "killzones": [],
+            "TIMEFRAME_SECONDS": 300
+        }
+    },
+    "SupplyDemandStrategy": {
+        "file_path": "C:/Users/alire/OneDrive/Desktop/ENGINES_ver3.8/LIVE_ENGINE V3.8/Strategies_Final_V3.py",
+        "params": {
+            "ATR_PERIOD": 0,
+            "TREND_EMA_PERIOD": 0,
+            "ZONE_AVG_BODY_PERIOD": 0,
+            "ZONE_STRENGTH_MULT": 0,
+            "SL_ATR_PADDING": 0,
+            "RISK_REWARD_RATIO": 0
+        },
+        "config": {
+            "symbol": "XAUUSD",
+            "magic_number": 778298,
+            "timeframe": "M5",
+            "lookback": 500,
+            "point_value": 1.0,
+            "adjustment_pips": 0,
+            "candle_type": "STANDARD",
+            "contract_size": null,
+            "allowed_days": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "killzones": [],
+            "TIMEFRAME_SECONDS": 300
         }
     }
 }

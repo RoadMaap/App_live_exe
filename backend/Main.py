@@ -25,6 +25,7 @@ try:
     from security import verify_license_online, get_hwid
     from bot_settings import create_symbol_config 
     from strategy_loader import StrategyLoader 
+    from News_Manager import start_news_ticker_service
     
     # Shared Modules (Risk & Margin)
     from Shared_Modules.Risk_management_Class import (FixedRiskAmountRule, FixedLotRule, PercentRiskRule, 
@@ -494,7 +495,7 @@ if __name__ == '__main__':
     
     print(f"🚀 Starting App Mode at {APP_URL}")
     app_flags = ['--window-size=1200,850', '--disable-infobars', '--disable-extensions']
-    
+    start_news_ticker_service()
     try:
         eel.start(START_PAGE, mode='edge', port=MY_PORT, size=(1200, 850), close_callback=on_close, cmdline_args=app_flags)
     except Exception as e:

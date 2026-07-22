@@ -1,5 +1,6 @@
-# Python
-__pycache__/
+Python
+
+pycache/
 *.py[cod]
 *.pyo
 *.pyd
@@ -9,19 +10,36 @@ __pycache__/
 venv/
 env/
 
-# Environment
+Environment
+
 .env
 .env.*
 
-# IDE
+IDE
+
 .vscode/
 .idea/
 
-# Node / Frontend
+Node / Frontend
+
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
-# OS
+OS
+
 .DS_Store
 Thumbs.db
+
+---------------------------------------------------
+
+Data & Config Files (JSON)
+
+---------------------------------------------------
+
+
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/tsconfig.json
+!frontend/jsconfig.json
+!frontend/.eslintrc.json

@@ -52,13 +52,13 @@ const translations = {
         running: "RUNNING",
         stopped: "STOPPED",
         
-        // Dashboard Header
+        // --- Dashboard Header ---
         roadmap_trader_basic: "RoadMap Trader Basic",
         strategy_manager: "Strategy Manager",
         real_time_monitoring: "Real-time monitoring of performance & risk",
-        active_strategies: "Active Strategies",
+        active_strategies: "ACTIVE STRATEGIES",
         
-        // NEW ADDITIONS - Engine Panel
+        // --- Engine Panel / Logs ---
         trading_engine_title: "Trading Engine",
         system_online: "SYSTEM ONLINE",
         system_offline: "SYSTEM OFFLINE",
@@ -67,10 +67,12 @@ const translations = {
         browse_btn: "BROWSE",
         live_execution_logs: "Live Execution Logs",
         system_initialized: "System Initialized. Waiting for commands...",
+        debugger: "DEBUGGER",
+        terminal: "TERMINAL",
         
-        // Strategy Panel
+        // --- Strategy Panel ---
         strategy_management: "Strategy Management",
-        strategy_config_subtitle: "Configure trading algorithms & execution rules",
+        strategy_config_subtitle: "Manage and configure your algorithmic strategies",
         import_strategy: "Import Strategy",
         no_strategies_found: "No active strategies found",
         no_strategies_desc: "Import a Python strategy file (.py) to get started",
@@ -86,8 +88,14 @@ const translations = {
         risk_fixed_usd: "Fixed USD Risk",
         risk_fixed_lot: "Fixed Lot Size",
         risk_percent: "Percentage Risk",
+        algorithm_parameters: "Algorithm Parameters",
+        market_configuration: "Market Configuration",
+        active_trading_hours: "Active Trading Hours",
+        from: "FROM",
+        to: "TO",
+        invalid: "INVALID",
         
-        // Bot Settings Panel
+        // --- Bot Settings Panel ---
         trading_days: "Trading Days",
         apply_changes: "Apply Changes",
         day_mon: "Mon",
@@ -100,21 +108,25 @@ const translations = {
         magic_number: "Magic Number",
         candle_type: "Candle Type",
         
-        // Risk Panel
+        // --- Risk Panel & News Filter ---
         engine_warmup: "Engine Warm-up Phase",
         warmup_candles: "Candles",
         warmup_system: "Engine Warm-up Phase",
         warmup_desc: "Maintains algorithm rhythm by pre-calculating historical data.",
         candles: "Candles",
+        news_filter: "Smart News Filter",
+        news_filter_desc: "Halts trading during high-impact (RED) economic events.",
+        mins_before: "Mins Before",
+        mins_after: "Mins After",
         
-        // Login Page
+        // --- Login Page ---
         app_subtitle: "Professional Algorithmic Trading Terminal",
         version: "v2.5.0",
         
-        // Sidebar
+        // --- Sidebar ---
         collapse_view: "Collapse View",
         
-        // Global Risk
+        // --- Global Risk ---
         global_risk: "Global Risk Management",
         global_risk_desc: "Auto-safety rules for all trades",
         target_lock: "Daily Target Lock",
@@ -145,7 +157,7 @@ const translations = {
         equity_growth: "رشد سرمایه",
         open_positions: "پوزیشن‌های باز",
         market_exposure_active: "در معرض بازار",
-        no_exposure: "بدون معرض",
+        no_exposure: "بدون پوزیشن فعال",
         status_normal: "وضعیت: نرمال",
         risk_management_cfg: "تنظیمات مدیریت ریسک",
         risk_calc_label: "محاسبه ریسک",
@@ -171,22 +183,30 @@ const translations = {
         running: "در حال اجرا",
         stopped: "متوقف شده",
         
-        // Engine Panel
+        // --- Dashboard Header ---
+        roadmap_trader_basic: "RoadMap Trader",
+        strategy_manager: "مدیریت استراتژی",
+        real_time_monitoring: "نظارت بلادرنگ بر عملکرد و وضعیت ریسک",
+        active_strategies: "استراتژی‌های فعال",
+        
+        // --- Engine Panel / Logs ---
         trading_engine_title: "موتور معاملاتی",
         system_online: "سیستم آنلاین",
         system_offline: "سیستم آفلاین",
-        processing_ticks: "پردازش Ticks...",
+        processing_ticks: "پردازش تیک‌ها...",
         not_selected: "انتخاب نشده",
-        browse_btn: "مرور",
+        browse_btn: "مرور مسیر",
         live_execution_logs: "لاگ اجرای زنده",
-        system_initialized: "سیستم مهیا شد. منتظر دستورات...",
+        system_initialized: "سیستم مهیا شد. منتظر دریافت دستورات...",
+        debugger: "دیباگر (عیب‌یاب)",
+        terminal: "ترمینال اصلی",
         
-        // Strategy Panel
+        // --- Strategy Panel ---
         strategy_management: "مدیریت استراتژی",
         strategy_config_subtitle: "پیکربندی الگوریتم‌های معاملاتی و قوانین اجرا",
-        import_strategy: "درون‌ریزی استراتژی",
+        import_strategy: "افزودن استراتژی",
         no_strategies_found: "هیچ استراتژی فعالی یافت نشد",
-        no_strategies_desc: "یک فایل استراتژی پایتون (.py) را برای شروع درون‌ریزی کنید",
+        no_strategies_desc: "یک فایل استراتژی پایتون (.py) را برای شروع وارد کنید",
         timeframe_m1: "M1 - 1 دقیقه",
         timeframe_m5: "M5 - 5 دقیقه",
         timeframe_m15: "M15 - 15 دقیقه",
@@ -195,12 +215,18 @@ const translations = {
         timeframe_d1: "D1 - روزانه",
         timeframe_w1: "W1 - هفتگی",
         candle_standard: "شمع‌های معمولی",
-        candle_heikin: "شمع‌های هایکین آشی",
-        risk_fixed_usd: "ریسک مبلغ ثابت",
+        candle_heikin: "هایکین آشی",
+        risk_fixed_usd: "ریسک مبلغ ثابت ($)",
         risk_fixed_lot: "حجم لات ثابت",
-        risk_percent: "ریسک درصدی",
+        risk_percent: "ریسک درصدی (%)",
+        algorithm_parameters: "پارامترهای الگوریتم",
+        market_configuration: "پیکربندی بازار",
+        active_trading_hours: "ساعات فعال معاملاتی",
+        from: "از",
+        to: "تا",
+        invalid: "نامعتبر",
         
-        // Bot Settings Panel
+        // --- Bot Settings Panel ---
         trading_days: "روز‌های معاملاتی",
         apply_changes: "اعمال تغییرات",
         day_mon: "دوشنبه",
@@ -213,31 +239,31 @@ const translations = {
         magic_number: "شماره جادویی",
         candle_type: "نوع شمع",
         
-        // Risk Panel
+        // --- Risk Panel & News Filter ---
         engine_warmup: "مرحله گرم‌سازی موتور",
         warmup_candles: "شمع",
         warmup_system: "مرحله گرم‌سازی موتور",
-        warmup_desc: "حفظ ریتم الگوریتم با از پیش محاسبه داده‌های تاریخی",
+        warmup_desc: "حفظ ریتم الگوریتم با از پیش محاسبه داده‌های تاریخی برای جلوگیری از خطای سیگنال.",
         candles: "شمع",
+        news_filter: "فیلتر هوشمند اخبار",
+        news_filter_desc: "توقف معاملات در زمان انتشار اخبار مهم اقتصادی برای محافظت از حساب.",
+        mins_before: "دقیقه قبل",
+        mins_after: "دقیقه بعد",
         
-        // Login Page
+        // --- Login Page ---
         app_subtitle: "ترمینال معاملاتی الگوریتمی حرفه‌ای",
         version: "نسخه 2.5.0",
         
-        // Sidebar
-        collapse_view: "جمع‌کردن نمای",
+        // --- Sidebar ---
+        collapse_view: "جمع‌کردن نوار",
         
-        // Dashboard Header
-        roadmap_trader_basic: "RoadMap Trader",
-        strategy_manager: "مدیریت استراتژی",
-        real_time_monitoring: "نظارت بلادرنگ بر عملکرد و ریسک",
-        active_strategies: "استراتژی‌های فعال",
-        
-        // Global Risk
+        // --- Global Risk ---
         global_risk: "مدیریت ریسک سراسری",
         global_risk_desc: "قوانین امنیتی خودکار برای تمامی معاملات",
         target_lock: "قفل تارگت روزانه",
         target_value: "تارگت"
+        
+        
     }
 };
 

@@ -1,0 +1,14 @@
+{
+    "mt5_path": "C:/Program Files/MetaTrader 5/terminal64.exe",
+    "risk_mode": "fixed_usd",
+    "risk_value": 100.0,
+    "be_enabled": false,
+    "be_trigger": 1.0,
+    "pc_enabled": false,
+    "pc_volume": 50.0,
+    "pc_trigger": 2.0,
+    "tl_enabled": false,
+    "tl_trigger": 10200.0,
+    "wu_enabled": true,
+    "wu_candles": 500
+}

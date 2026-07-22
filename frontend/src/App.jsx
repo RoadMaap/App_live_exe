@@ -15,6 +15,7 @@ function MainApp() {
 
 export default function App() {
   return (
+    // حالا فقط Provider زبان باقی مانده و پروژه بسیار سبک‌تر شده است
     <LanguageProvider>
       <MainApp />
     </LanguageProvider>

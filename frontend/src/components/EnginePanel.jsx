@@ -1,11 +1,20 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
 const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) => {
     const { t } = useLanguage();
     const scrollViewportRef = useRef(null);
+    
+    // State for switching between Normal Logs and Error Logs
+    const [activeTab, setActiveTab] = useState('live'); // 'live' | 'error'
 
-    // اسکرول خودکار به پایین
+    // Separate logs into normal and error categories based on color flag
+    const errorLogs = logs.filter(log => log.color.includes('rose'));
+    const normalLogs = logs.filter(log => !log.color.includes('rose'));
+    
+    const displayLogs = activeTab === 'live' ? normalLogs : errorLogs;
+
+    // Auto-scroll to the bottom of the logs
     useEffect(() => {
         if (scrollViewportRef.current) {
             const { scrollHeight, clientHeight } = scrollViewportRef.current;
@@ -13,7 +22,7 @@ const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) 
                 scrollViewportRef.current.scrollTop = scrollHeight;
             }
         }
-    }, [logs]);
+    }, [displayLogs]);
 
     const choosePath = async () => {
         if(window.eel) {
@@ -25,12 +34,12 @@ const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) 
     return (
         <div className="flex flex-col gap-6 font-sans h-full">
             
-            {/* --- Control Center (ثابت) --- */}
+            {/* --- Control Center --- */}
             <div className="bg-[#121215] border border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[180px] shrink-0 group shadow-xl">
                 <div className={`absolute inset-0 bg-gradient-to-t from-emerald-500/20 to-transparent blur-2xl transition-opacity duration-700 ${isRunning ? 'opacity-100' : 'opacity-0'}`}></div>
                 <div className={`absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent transition-opacity duration-700 ${isRunning ? 'opacity-100' : 'opacity-0'}`}></div>
 
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-6 relative z-10">{t('trading_engine_title')}</h3>
+                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-6 relative z-10">{t('trading_engine')}</h3>
                 
                 <button 
                     onClick={onToggle} 
@@ -51,15 +60,15 @@ const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) 
                 
                 <div className="mt-5 relative z-10 flex flex-col items-center h-10 justify-start">
                     <span className={`text-xs font-bold transition-all duration-300 ${isRunning ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-zinc-500'}`}>
-                        {isRunning ? t('system_online') : t('system_offline')}
+                        {isRunning ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}
                     </span>
                     <span className={`text-[9px] text-emerald-500/60 mt-1 font-mono transition-opacity duration-300 ${isRunning ? 'opacity-100' : 'opacity-0'}`}>
-                        {t('processing_ticks')}
+                        Processing Ticks...
                     </span>
                 </div>
             </div>
 
-            {/* --- Path Settings (ثابت) --- */}
+            {/* --- Path Settings --- */}
             <div className="bg-[#121215] border border-white/5 rounded-2xl p-4 shrink-0">
                 <div className="flex justify-between items-center mb-2">
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">{t('terminal_path')}</label>
@@ -68,44 +77,58 @@ const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) 
                 <div className="flex gap-2 bg-[#09090b] p-1.5 rounded-xl border border-white/5 focus-within:border-emerald-500/30 transition-colors">
                     <input 
                         type="text" 
-                        value={mt5Path || t('not_selected')} 
+                        value={mt5Path || "Not Selected"} 
                         readOnly
                         className="flex-1 bg-transparent border-none outline-none px-2 text-[10px] text-zinc-400 font-mono truncate" 
                     />
                     <button onClick={choosePath} className="px-3 bg-white/5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 text-[10px] font-bold transition-colors">
-                        {t('browse_btn')}
+                        BROWSE
                     </button>
                 </div>
             </div>
 
-            {/* --- Console Logs --- */}
+            {/* --- Console Logs (Tabbed Interface) --- */}
             <div className="bg-[#121215] border border-white/5 rounded-2xl flex flex-col overflow-hidden shadow-inner shrink-0">
                 
-                <div className="flex justify-between items-center px-4 py-3 border-b border-white/5 bg-[#151518] shrink-0">
-                     <div className="flex items-center gap-2">
-                         <svg className="w-3 h-3 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3" /></svg>
-                         <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{t('live_execution_logs')}</h3>
-                     </div>
-                     <div className="flex gap-1.5">
-                         <span className="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
-                         <span className="w-1.5 h-1.5 rounded-full bg-zinc-700"></span>
-                     </div>
+                {/* Custom Tab Header */}
+                <div className="flex items-center px-2 py-2 border-b border-white/5 bg-[#151518] shrink-0 gap-2">
+                     <button 
+                        onClick={() => setActiveTab('live')}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all outline-none ${activeTab === 'live' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-zinc-500 hover:bg-white/5 border border-transparent'}`}
+                     >
+                         Terminal
+                     </button>
+                     <button 
+                        onClick={() => setActiveTab('error')}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all outline-none flex items-center justify-center gap-2 ${activeTab === 'error' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'text-zinc-500 hover:bg-white/5 border border-transparent'}`}
+                     >
+                         Debugger
+                         {errorLogs.length > 0 && (
+                             <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded-full text-[8px] leading-none animate-pulse">
+                                 {errorLogs.length}
+                             </span>
+                         )}
+                     </button>
                 </div>
                 
-                {/* [تغییر]: افزایش ارتفاع از h-60 به h-96 (حدود 384 پیکسل) */}
                 <div 
                     ref={scrollViewportRef}
-                    className="h-96 overflow-y-auto custom-scroll p-4 font-mono text-[10px] space-y-1.5 bg-[#09090b]/50 scroll-smooth"
+                    className="h-96 overflow-y-auto custom-scroll p-4 font-mono text-[10px] space-y-2 bg-[#09090b]/50 scroll-smooth"
                 >
-                    <div className="text-zinc-600 border-l-2 border-zinc-800 pl-2">{t('system_initialized')}</div>
-                    {logs.map((log, index) => (
-                        <div key={index} className={`pl-2 border-l-2 leading-relaxed break-words animate-fade-in ${
-                            log.color.includes('rose') ? 'border-rose-500/50 text-rose-400 bg-rose-500/5 py-1 pr-1' : 
-                            log.color.includes('emerald') ? 'border-emerald-500/50 text-emerald-400' : 
-                            log.color.includes('yellow') ? 'border-yellow-500/50 text-yellow-400' : 'border-zinc-700 text-zinc-400'
-                        }`}>
-                            <span className="opacity-50 text-[9px] mr-2">[{log.time}]</span>
-                            {log.message}
+                    {activeTab === 'live' && <div className="text-zinc-600 border-l-2 border-zinc-800 pl-2">System Initialized. Waiting for commands...</div>}
+                    {activeTab === 'error' && errorLogs.length === 0 && <div className="text-emerald-600/50 border-l-2 border-emerald-900/50 pl-2 flex items-center gap-2"><span>✓</span> Zero runtime errors. Strategy classes are clean.</div>}
+                    
+                    {displayLogs.map((log, index) => (
+                        <div key={index} className="flex gap-2">
+                            <span className="opacity-50 text-[9px] text-zinc-600 shrink-0 mt-0.5">[{log.time}]</span>
+                            {/* whitespace-pre-wrap ensures multi-line python tracebacks render perfectly */}
+                            <div className={`flex-1 pl-2 border-l-2 leading-relaxed break-words whitespace-pre-wrap animate-fade-in ${
+                                log.color.includes('rose') ? 'border-rose-500/50 text-rose-400 bg-rose-500/5 py-1 pr-1' : 
+                                log.color.includes('emerald') ? 'border-emerald-500/50 text-emerald-400' : 
+                                log.color.includes('yellow') ? 'border-yellow-500/50 text-yellow-400' : 'border-zinc-700 text-zinc-400'
+                            }`}>
+                                {log.message}
+                            </div>
                         </div>
                     ))}
                 </div>

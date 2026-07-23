@@ -52,7 +52,12 @@ GLOBAL_SETTINGS_DEFAULTS = {
     "tl_enabled": False,       # Target Lock toggle
     "tl_trigger": 10200.0,     # Target Equity value
     "wu_enabled": True,        # Engine Warm-up toggle
-    "wu_candles": 500          # Candles for pre-calculation
+    "wu_candles": 500,         # Candles for pre-calculation
+    "nf_enabled": False,       # News Filter Toggle
+    "nf_eur": True,            # EUR News Toggle
+    "nf_usd": True,            # USD News Toggle
+    "nf_before": 30,
+    "nf_after": 30
 }
 
 DEFAULT_STRATEGY_CONFIG = {

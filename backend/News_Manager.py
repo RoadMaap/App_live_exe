@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import time
 import threading
 import sys
+import os
+import json
 
 def ui_log(msg_type, msg):
     print(msg)
@@ -13,6 +15,22 @@ def ui_log(msg_type, msg):
             eel.update_status(msg_type, msg)()
     except Exception:
         pass
+
+def get_active_currencies():
+    """به صورت زنده فایل تنظیمات را می‌خواند تا بفهمد کدام ارزها توسط کاربر روشن شده‌اند"""
+    try:
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        settings_path = os.path.join(backend_dir, 'Jsons', 'user_settings.json')
+        if not os.path.exists(settings_path):
+            return ['EUR', 'USD']
+        with open(settings_path, 'r') as f:
+            data = json.load(f)
+            curs = []
+            if data.get('nf_eur', True): curs.append('EUR')
+            if data.get('nf_usd', True): curs.append('USD')
+            return curs
+    except Exception:
+        return ['EUR', 'USD']
 
 class NewsFilter:
     _instance = None
@@ -34,7 +52,7 @@ class NewsFilter:
     def fetch_news(self):
         current_time = time.time()
         
-        # سیستم کشینگ برای جلوگیری از بن شدن آی‌پی
+        # Caching system
         if self.news_data and (current_time - self.last_fetch_time) < (self.cache_minutes * 60):
             return self.news_data
 
@@ -48,10 +66,13 @@ class NewsFilter:
             
             for event in root.findall('event'):
                 impact = event.find('impact').text.strip() if event.find('impact') is not None else ''
-                
                 if impact != 'High': continue # فقط اخبار قرمز
                     
-                currency = event.find('country').text.strip() if event.find('country') is not None else ''
+                currency = event.find('country').text.strip().upper() if event.find('country') is not None else ''
+                
+                # 🚨 FILTER: فقط اخبار یورو و دلار را استخراج کن، بقیه دور ریخته شوند
+                if currency not in ['EUR', 'USD']: continue
+                    
                 date_str = event.find('date').text.strip() if event.find('date') is not None else ''
                 time_str = event.find('time').text.strip() if event.find('time') is not None else ''
                 title = event.find('title').text.strip() if event.find('title') is not None else ''
@@ -59,13 +80,12 @@ class NewsFilter:
                 if 'All Day' in time_str or not time_str: continue
                 
                 try:
-                    # تبدیل زمان شرقی آمریکا به زمان جهانی (UTC)
                     datetime_str = f"{date_str} {time_str}"
                     event_dt_est = datetime.strptime(datetime_str, '%m-%d-%Y %I:%M%p')
                     event_utc = event_dt_est + timedelta(hours=5)
                     
                     parsed_news.append({
-                        'currency': currency.upper(),
+                        'currency': currency,
                         'time': event_utc,
                         'title': title
                     })
@@ -74,7 +94,7 @@ class NewsFilter:
 
             self.news_data = sorted(parsed_news, key=lambda x: x['time'])
             self.last_fetch_time = current_time
-            ui_log('success', f"🌍 [NEWS DAEMON] Synced {len(self.news_data)} High-Impact events (UTC).")
+            ui_log('success', f"🌍 [NEWS DAEMON] Synced {len(self.news_data)} High-Impact (EUR/USD) events.")
             
         except Exception as e:
             ui_log('error', f"⚠️ [NEWS DAEMON ERROR] Could not fetch calendar: {e}")
@@ -82,14 +102,17 @@ class NewsFilter:
         return self.news_data
 
     def get_next_news_ui(self):
-        """یافتن خبر بعدی برای نمایش در داشبورد ریکت"""
         if not self.news_data:
             return None
             
         current_utc = datetime.utcnow()
+        active_curs = get_active_currencies() # خواندن دکمه‌های روشن شده توسط کاربر
         
         for news in self.news_data:
-            # خبر را تا 30 دقیقه بعد از انتشار روی مانیتور نگه دار
+            # 🚨 FILTER: اگر دکمه این ارز در پنل خاموش بود، از آن پرش کن
+            if news['currency'] not in active_curs:
+                continue
+                
             if news['time'] + timedelta(minutes=30) > current_utc:
                 time_diff = news['time'] - current_utc
                 
@@ -108,18 +131,14 @@ class NewsFilter:
                 
         return None
 
-# ==============================================================================
-# سرویس پس‌زمینه (Background Daemon) برای ارسال زنده تایمر به React
-# بدون هیچ ارتباطی با موتور اصلی ترید!
-# ==============================================================================
 class NewsTickerDaemon(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.daemon = True  # وقتی برنامه اصلی بسته شود، این رشته هم بسته می‌شود
+        self.daemon = True 
         self.news_filter = NewsFilter()
 
     def run(self):
-        time.sleep(2) # صبر برای لود شدن Eel
+        time.sleep(2) 
         ui_log('success', "🌐 [BACKGROUND SERVICE] UI News Ticker Daemon Started.")
         
         while True:
@@ -127,22 +146,15 @@ class NewsTickerDaemon(threading.Thread):
                 self.news_filter.fetch_news()
                 next_news = self.news_filter.get_next_news_ui()
                 
-                if next_news:
-                    import eel
-                    if hasattr(eel, 'update_news_ticker'):
-                        # ارسال دیتا به داشبورد بدون درگیر کردن انجین
-                        eel.update_news_ticker(next_news)()
+                import eel
+                if hasattr(eel, 'update_news_ticker'):
+                    eel.update_news_ticker(next_news)()
             except Exception:
                 pass
             
-            # هر یک ثانیه تایمر روی داشبورد را آپدیت می‌کند
             time.sleep(1)
 
 def start_news_ticker_service():
-    """
-    این تابع را می‌توانید در Main.py خود (جایی که Eel استارت می‌خورد) فراخوانی کنید
-    تا تیک‌تاک اخبار روی داشبورد روشن شود.
-    """
     daemon = NewsTickerDaemon()
     daemon.start()
     return daemon

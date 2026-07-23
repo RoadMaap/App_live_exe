@@ -72,7 +72,7 @@ const translations = {
         
         // --- Strategy Panel ---
         strategy_management: "Strategy Management",
-        strategy_config_subtitle: "Manage and configure your algorithmic strategies",
+        strategy_config_subtitle: "Configure trading algorithms & execution rules",
         import_strategy: "Import Strategy",
         no_strategies_found: "No active strategies found",
         no_strategies_desc: "Import a Python strategy file (.py) to get started",
@@ -130,7 +130,20 @@ const translations = {
         global_risk: "Global Risk Management",
         global_risk_desc: "Auto-safety rules for all trades",
         target_lock: "Daily Target Lock",
-        target_value: "Target"
+        target_value: "Target",
+        
+        // --- AI & Education ---
+        education_tab: "AI Builder",
+        ai_builder_title: "AI Strategy Builder",
+        ai_builder_subtitle: "Build trading bots without coding! Copy the template and paste it into ChatGPT.",
+        step_1_title: "1. Copy Template",
+        step_1_desc: "Click the copy button below to copy the standard trading architecture.",
+        step_2_title: "2. Talk to AI",
+        step_2_desc: "Open ChatGPT or Claude. Paste the code and say: 'Using this template, write a strategy that buys when RSI < 30...'",
+        step_3_title: "3. Import & Run",
+        step_3_desc: "Save the AI's code in a .py file. Go to the Strategy Manager tab, import it, and watch it trade!",
+        copy_code: "Copy Architecture",
+        copied: "Copied successfully!"
     },
     fa: {
         page_title: "پنل مدیریت | RoadMap Trader",
@@ -261,9 +274,20 @@ const translations = {
         global_risk: "مدیریت ریسک سراسری",
         global_risk_desc: "قوانین امنیتی خودکار برای تمامی معاملات",
         target_lock: "قفل تارگت روزانه",
-        target_value: "تارگت"
+        target_value: "تارگت",
         
-        
+        // --- AI & Education ---
+        education_tab: "ربات‌ساز هوش مصنوعی",
+        ai_builder_title: "ساخت استراتژی با هوش مصنوعی",
+        ai_builder_subtitle: "بدون یک خط کدنویسی ربات بسازید! این قالب را کپی کرده و به ChatGPT بدهید.",
+        step_1_title: "۱. کپی کردن قالب",
+        step_1_desc: "روی دکمه کپی کلیک کنید تا معماری استاندارد ربات در حافظه شما ذخیره شود.",
+        step_2_title: "۲. صحبت با هوش مصنوعی",
+        step_2_desc: "چت‌جی‌پی‌تی (ChatGPT) را باز کنید. قالب را پیست کنید و به زبان ساده بگویید: «با این قالب استراتژی بنویس که اگر RSI زیر 30 رفت بخر...»",
+        step_3_title: "۳. درون‌ریزی و اجرا",
+        step_3_desc: "کدی که هوش مصنوعی داد را در یک فایل .py ذخیره کنید. به تب مدیریت استراتژی بروید، آن را درون‌ریزی (Import) کنید و تمام!",
+        copy_code: "کپی کردن معماری",
+        copied: "با موفقیت کپی شد!"
     }
 };
 

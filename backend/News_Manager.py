@@ -3,7 +3,6 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import time
 import threading
-import sys
 import os
 import json
 
@@ -12,12 +11,12 @@ def ui_log(msg_type, msg):
     try:
         import eel
         if hasattr(eel, 'update_status'):
-            eel.update_status(msg_type, msg)()
+            # 🚨 FIX: حذف پرانتز برای جلوگیری از فریز شدن پایتون هنگام ارسال خبر
+            eel.update_status(msg_type, msg)
     except Exception:
         pass
 
 def get_active_currencies():
-    """به صورت زنده فایل تنظیمات را می‌خواند تا بفهمد کدام ارزها توسط کاربر روشن شده‌اند"""
     try:
         backend_dir = os.path.dirname(os.path.abspath(__file__))
         settings_path = os.path.join(backend_dir, 'Jsons', 'user_settings.json')
@@ -52,7 +51,6 @@ class NewsFilter:
     def fetch_news(self):
         current_time = time.time()
         
-        # Caching system
         if self.news_data and (current_time - self.last_fetch_time) < (self.cache_minutes * 60):
             return self.news_data
 
@@ -66,11 +64,11 @@ class NewsFilter:
             
             for event in root.findall('event'):
                 impact = event.find('impact').text.strip() if event.find('impact') is not None else ''
-                if impact != 'High': continue # فقط اخبار قرمز
+                if impact != 'High': continue
                     
                 currency = event.find('country').text.strip().upper() if event.find('country') is not None else ''
                 
-                # 🚨 FILTER: فقط اخبار یورو و دلار را استخراج کن، بقیه دور ریخته شوند
+                # فیلتر اولیه: فقط اخبار یورو و دلار را ذخیره کن
                 if currency not in ['EUR', 'USD']: continue
                     
                 date_str = event.find('date').text.strip() if event.find('date') is not None else ''
@@ -106,10 +104,9 @@ class NewsFilter:
             return None
             
         current_utc = datetime.utcnow()
-        active_curs = get_active_currencies() # خواندن دکمه‌های روشن شده توسط کاربر
+        active_curs = get_active_currencies() 
         
         for news in self.news_data:
-            # 🚨 FILTER: اگر دکمه این ارز در پنل خاموش بود، از آن پرش کن
             if news['currency'] not in active_curs:
                 continue
                 
@@ -146,9 +143,11 @@ class NewsTickerDaemon(threading.Thread):
                 self.news_filter.fetch_news()
                 next_news = self.news_filter.get_next_news_ui()
                 
-                import eel
-                if hasattr(eel, 'update_news_ticker'):
-                    eel.update_news_ticker(next_news)()
+                if next_news:
+                    import eel
+                    if hasattr(eel, 'update_news_ticker'):
+                        # 🚨 FIX: حذف پرانتز آخر برای جلوگیری از تایم‌اوت و گیر کردن برنامه
+                        eel.update_news_ticker(next_news)
             except Exception:
                 pass
             

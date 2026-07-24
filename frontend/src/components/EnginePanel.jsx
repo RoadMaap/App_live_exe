@@ -1,20 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) => {
+const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle, onClearLogs }) => {
     const { t } = useLanguage();
     const scrollViewportRef = useRef(null);
-    
-    // State for switching between Normal Logs and Error Logs
-    const [activeTab, setActiveTab] = useState('live'); // 'live' | 'error'
+    const [isCopied, setIsCopied] = useState(false);
 
-    // Separate logs into normal and error categories based on color flag
-    const errorLogs = logs.filter(log => log.color.includes('rose'));
-    const normalLogs = logs.filter(log => !log.color.includes('rose'));
-    
-    const displayLogs = activeTab === 'live' ? normalLogs : errorLogs;
-
-    // Auto-scroll to the bottom of the logs
+    // Auto-scroll to the bottom of the logs whenever a new log arrives
     useEffect(() => {
         if (scrollViewportRef.current) {
             const { scrollHeight, clientHeight } = scrollViewportRef.current;
@@ -22,12 +14,28 @@ const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) 
                 scrollViewportRef.current.scrollTop = scrollHeight;
             }
         }
-    }, [displayLogs]);
+    }, [logs]);
 
     const choosePath = async () => {
         if(window.eel) {
             const path = await window.eel.choose_mt5_path()();
             if(path) onPathChange(path);
+        }
+    };
+
+    const handleCopyLogs = async () => {
+        if (!logs.length) return;
+        
+        // Format logs beautifully for the clipboard
+        const logText = logs.map(l => `[${l.time}] ${l.message}`).join('\n');
+        
+        try {
+            await navigator.clipboard.writeText(logText);
+            setIsCopied(true);
+            // Revert back to copy icon after 2 seconds
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
         }
     };
 
@@ -87,38 +95,50 @@ const EnginePanel = ({ mt5Path, onPathChange, logs = [], isRunning, onToggle }) 
                 </div>
             </div>
 
-            {/* --- Console Logs (Tabbed Interface) --- */}
+            {/* --- Console Logs --- */}
+            {}
             <div className="bg-[#121215] border border-white/5 rounded-2xl flex flex-col overflow-hidden shadow-inner shrink-0">
                 
-                {/* Custom Tab Header */}
-                <div className="flex items-center px-2 py-2 border-b border-white/5 bg-[#151518] shrink-0 gap-2">
-                     <button 
-                        onClick={() => setActiveTab('live')}
-                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all outline-none ${activeTab === 'live' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-zinc-500 hover:bg-white/5 border border-transparent'}`}
-                     >
-                         Terminal
-                     </button>
-                     <button 
-                        onClick={() => setActiveTab('error')}
-                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all outline-none flex items-center justify-center gap-2 ${activeTab === 'error' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'text-zinc-500 hover:bg-white/5 border border-transparent'}`}
-                     >
-                         Debugger
-                         {errorLogs.length > 0 && (
-                             <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded-full text-[8px] leading-none animate-pulse">
-                                 {errorLogs.length}
-                             </span>
-                         )}
-                     </button>
+                <div className="flex justify-between items-center px-4 py-3 border-b border-white/5 bg-[#151518] shrink-0 group">
+                     <div className="flex items-center gap-2">
+                         <svg className="w-3 h-3 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3" /></svg>
+                         <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{t('live_logs')}</h3>
+                     </div>
+                     
+                     <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity duration-300">
+                        {/* Copy Logs Button */}
+                        <button 
+                            onClick={handleCopyLogs} 
+                            disabled={!logs.length}
+                            className="p-1.5 rounded-md bg-white/5 hover:bg-blue-500/10 text-zinc-500 hover:text-blue-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            title="Copy All Logs"
+                        >
+                            {isCopied ? (
+                                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                            ) : (
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                            )}
+                        </button>
+                        
+                        {/* Clear Logs Button */}
+                        <button 
+                            onClick={onClearLogs} 
+                            disabled={!logs.length}
+                            className="p-1.5 rounded-md bg-white/5 hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            title="Clear Console"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                     </div>
                 </div>
                 
+                {}
                 <div 
                     ref={scrollViewportRef}
                     className="h-96 overflow-y-auto custom-scroll p-4 font-mono text-[10px] space-y-2 bg-[#09090b]/50 scroll-smooth"
                 >
-                    {activeTab === 'live' && <div className="text-zinc-600 border-l-2 border-zinc-800 pl-2">System Initialized. Waiting for commands...</div>}
-                    {activeTab === 'error' && errorLogs.length === 0 && <div className="text-emerald-600/50 border-l-2 border-emerald-900/50 pl-2 flex items-center gap-2"><span>✓</span> Zero runtime errors. Strategy classes are clean.</div>}
-                    
-                    {displayLogs.map((log, index) => (
+                    <div className="text-zinc-600 border-l-2 border-zinc-800 pl-2">System Initialized. Waiting for commands...</div>
+                    {logs.map((log, index) => (
                         <div key={index} className="flex gap-2">
                             <span className="opacity-50 text-[9px] text-zinc-600 shrink-0 mt-0.5">[{log.time}]</span>
                             {/* whitespace-pre-wrap ensures multi-line python tracebacks render perfectly */}

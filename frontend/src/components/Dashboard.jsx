@@ -11,8 +11,10 @@ import EducationPanel from './EducationPanel';
 const Dashboard = () => {
     const { t, toggleLanguage, lang } = useLanguage();
     
+    // --- Refs ---
     const mainContentRef = useRef(null);
     
+    // --- States ---
     const [mt5Path, setMt5Path] = useState("");
     const [initialData, setInitialData] = useState(null);
     const [logs, setLogs] = useState([]);
@@ -22,10 +24,10 @@ const Dashboard = () => {
     // News Ticker State
     const [nextNews, setNextNews] = useState(null);
 
-    // Engine Status
+    // --- State Engine ---
     const [isRunning, setIsRunning] = useState(false);
 
-    // Live Stats
+    // Live Data
     const [profitHistory, setProfitHistory] = useState(Array(15).fill(0));
     const [initialEquity, setInitialEquity] = useState(null);
     const [liveData, setLiveData] = useState({
@@ -99,20 +101,9 @@ const Dashboard = () => {
         
         setLogs(prev => {
             const newLogs = [...(prev || []), { time, message: message || '', color }];
+            // Keep maximum 100 logs to prevent memory leaks
             return newLogs.length > 100 ? newLogs.slice(newLogs.length - 100) : newLogs;
         });
-    }
-
-    function update_dashboard(profit, equity, positions) {
-        const p = parseFloat(profit) || 0.00;
-        const e = parseFloat(equity) || 0.00;
-        setLiveData({ profit: p, equity: e, positions: positions || 0 });
-        setProfitHistory(prev => {
-            const newHist = [...(prev || []), p];
-            if(newHist.length > 20) newHist.shift();
-            return newHist;
-        });
-        if (initialEquity === null && e > 0) setInitialEquity(e - p);
     }
 
     const handleToggleEngine = async () => {
@@ -130,16 +121,17 @@ const Dashboard = () => {
         }
     };
 
-    const handleStrategyConfigUpdate = (strategyName, newConfig) => {
-        setStrategies(prev => ({
-            ...prev,
-            [strategyName]: {
-                ...(prev?.[strategyName] || {}),
-                config: newConfig
-            }
-        }));
-        if(window.eel) window.eel.update_strategy_config(strategyName, 'config', newConfig);
-    };
+    function update_dashboard(profit, equity, positions) {
+        const p = parseFloat(profit) || 0.00;
+        const e = parseFloat(equity) || 0.00;
+        setLiveData({ profit: p, equity: e, positions: positions || 0 });
+        setProfitHistory(prev => {
+            const newHist = [...(prev || []), p];
+            if(newHist.length > 20) newHist.shift();
+            return newHist;
+        });
+        if (initialEquity === null && e > 0) setInitialEquity(e - p);
+    }
 
     const getEquityBar = () => {
         if (!initialEquity || initialEquity <= 0) return { width: '0%', isProfit: true, percent: "0.0" };
@@ -154,35 +146,43 @@ const Dashboard = () => {
             return { width: `${remainingPercent}%`, isProfit: false, percent: lossPercent.toFixed(1) };
         }
     };
-    
     const eqBar = getEquityBar();
+
+    const handleStrategyConfigUpdate = (strategyName, newConfig) => {
+        setStrategies(prev => ({
+            ...prev,
+            [strategyName]: {
+                ...(prev?.[strategyName] || {}),
+                config: newConfig
+            }
+        }));
+        if(window.eel) window.eel.update_strategy_config(strategyName, 'config', newConfig);
+    };
+
     const transitionClass = "transition-all duration-300 ease-[cubic-bezier(0.25,0.8,0.25,1)]";
 
     return (
         <div className={`flex flex-col h-screen bg-zinc-50 dark:bg-[#09090b] overflow-hidden text-zinc-900 dark:text-zinc-100 font-sans selection:bg-emerald-500/30 ${transitionClass}`}>
             <div className="flex flex-1 overflow-hidden relative">
                 
-                {/* Sidebar Component */}
                 <Sidebar status={isRunning ? "Running" : (mt5Path ? "Ready" : "Disconnected")} activeTab={activeTab} onTabChange={setActiveTab} />
 
                 <main 
                     ref={mainContentRef}
                     className="flex-1 flex flex-col h-full overflow-y-auto overflow-x-hidden relative"
                 >
-                    {/* Background glows */}
                     <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
                         <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-[120px] opacity-40"></div>
                         <div className="absolute top-[40%] -left-[10%] w-[600px] h-[600px] bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-[100px] opacity-30"></div>
                     </div>
 
-                    {/* Header */}
                     <header className={`h-20 shrink-0 border-b border-zinc-200 dark:border-white/5 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md flex items-center justify-between px-8 z-20 sticky top-0 ${transitionClass}`}>
                         <div>
                             <h2 className="text-xl font-bold text-zinc-800 dark:text-white tracking-tight flex items-center gap-3">
-                                {activeTab === 'dashboard' ? t('roadmap_trader_basic') : activeTab === 'education' ? t('ai_builder_title') || 'AI Strategy Builder' : t('strategy_manager')}
+                                {activeTab === 'dashboard' ? t('roadmap_trader_basic') : activeTab === 'education' ? t('ai_builder_title') : t('strategy_manager')}
                             </h2>
                             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                                {activeTab === 'dashboard' ? t('real_time_monitoring') : activeTab === 'education' ? t('ai_builder_subtitle') || 'Build algorithms without code' : t('strategy_config_subtitle')}
+                                {activeTab === 'dashboard' ? t('real_time_monitoring') : activeTab === 'education' ? t('ai_builder_subtitle') : t('strategy_config_subtitle')}
                             </p>
                         </div>
 
@@ -205,102 +205,98 @@ const Dashboard = () => {
                         </div>
                     </header>
 
-                    {/* Main Content Area */}
+                    {}
                     <div className="flex-1 px-8 pt-10 pb-8 z-10 custom-scroll">
                         <div className="max-w-[1920px] mx-auto h-full flex flex-col">
                             
                             {/* TAB 1: DASHBOARD (Persists state using hidden class) */}
                             <div className={`space-y-6 animate-fade-in ${activeTab === 'dashboard' ? 'block' : 'hidden'}`}>
-                                
-                                {/* Top Stats Row */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <StatCard 
                                         title={t('net_profit_today')} 
                                         value={`$${(liveData?.profit || 0).toFixed(2)}`} 
-                                        trend={(liveData?.profit || 0) > 0 ? 'up' : (liveData?.profit || 0) < 0 ? 'down' : 'neutral'} 
-                                        subValue={(liveData?.profit || 0) !== 0 ? ((liveData?.profit || 0) > 0 ? "+ROI" : "-Drawdown") : "0.0%"} 
-                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v20m5-15H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>}
-                                    >
-                                        <div className="h-16 w-full -mb-3 mt-3 opacity-80 group-hover:opacity-100 transition-all duration-500 scale-100 group-hover:scale-[1.02]">
-                                            <Sparkline data={profitHistory || []} color={(liveData?.profit || 0) >= 0 ? "#10b981" : "#f43f5e"} />
-                                        </div>
-                                    </StatCard>
+                                            trend={(liveData?.profit || 0) > 0 ? 'up' : (liveData?.profit || 0) < 0 ? 'down' : 'neutral'} 
+                                            subValue={(liveData?.profit || 0) !== 0 ? ((liveData?.profit || 0) > 0 ? "+ROI" : "-Drawdown") : "0.0%"} 
+                                            icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2v20m5-15H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>}
+                                        >
+                                            <div className="h-16 w-full -mb-3 mt-3 opacity-80 group-hover:opacity-100 transition-all duration-500 scale-100 group-hover:scale-[1.02]">
+                                                <Sparkline data={profitHistory || []} color={(liveData?.profit || 0) >= 0 ? "#10b981" : "#f43f5e"} />
+                                            </div>
+                                        </StatCard>
                                         
-                                    <StatCard 
-                                        title={t('account_balance')} 
-                                        value={`$${(liveData?.equity || 0).toFixed(2)}`}
-                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
-                                    >
-                                        <div className="w-full bg-zinc-200 dark:bg-zinc-800/50 h-2 rounded-full overflow-hidden flex justify-start relative mt-6 border border-zinc-300 dark:border-white/5">
-                                            {eqBar.isProfit ? (
-                                                <>
-                                                    <div className="h-full bg-zinc-400 dark:bg-zinc-600 w-full opacity-20"></div>
-                                                    <div className="absolute h-full bg-emerald-500 transition-all duration-700 ease-out shadow-[0_0_10px_#10b981]" style={{width: eqBar.width, right: lang === 'fa' ? 'auto' : 0, left: lang === 'fa' ? 0 : 'auto'}}></div>
-                                                </>
-                                            ) : (
-                                                <div className="h-full bg-rose-500 transition-all duration-700 ease-out shadow-[0_0_10px_#f43f5e]" style={{width: eqBar.width}}></div>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between items-center mt-2">
-                                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{t('equity_growth')}</span>
-                                            <span className={`text-[10px] font-bold ${eqBar.isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                                {eqBar.isProfit ? '+' : '-'}{eqBar.percent}%
-                                            </span>
-                                        </div>
-                                    </StatCard>
+                                        <StatCard 
+                                            title={t('account_balance')} 
+                                            value={`$${(liveData?.equity || 0).toFixed(2)}`}
+                                            icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+                                        >
+                                            <div className="w-full bg-zinc-200 dark:bg-zinc-800/50 h-2 rounded-full overflow-hidden flex justify-start relative mt-6 border border-zinc-300 dark:border-white/5">
+                                                {eqBar.isProfit ? (
+                                                    <>
+                                                        <div className="h-full bg-zinc-400 dark:bg-zinc-600 w-full opacity-20"></div>
+                                                        <div className="absolute h-full bg-emerald-500 transition-all duration-700 ease-out shadow-[0_0_10px_#10b981]" style={{width: eqBar.width, right: lang === 'fa' ? 'auto' : 0, left: lang === 'fa' ? 0 : 'auto'}}></div>
+                                                    </>
+                                                ) : (
+                                                    <div className="h-full bg-rose-500 transition-all duration-700 ease-out shadow-[0_0_10px_#f43f5e]" style={{width: eqBar.width}}></div>
+                                                )}
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{t('equity_growth')}</span>
+                                                <span className={`text-[10px] font-bold ${eqBar.isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                                    {eqBar.isProfit ? '+' : '-'}{eqBar.percent}%
+                                                </span>
+                                            </div>
+                                        </StatCard>
                                         
-                                    <StatCard 
-                                        title={t('open_positions')} 
-                                        value={liveData?.positions || 0}
-                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                                    >
-                                         <div className={`flex items-center gap-2 mt-4 p-2 rounded-lg border transition-colors ${
-                                             (liveData?.positions || 0) > 0 
-                                             ? 'bg-emerald-500/10 border-emerald-500/20' 
-                                             : 'bg-zinc-800/20 border-white/5'
-                                         }`}>
-                                            <span className="relative flex h-2 w-2">
-                                              {(liveData?.positions || 0) > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-                                              <span className={`relative inline-flex rounded-full h-2 w-2 ${(liveData?.positions || 0) > 0 ? 'bg-emerald-500' : 'bg-zinc-600'}`}></span>
-                                            </span>
-                                            <span className={`text-[10px] font-medium uppercase tracking-wide ${(liveData?.positions || 0) > 0 ? 'text-emerald-400' : 'text-zinc-500'}`}>
-                                                {(liveData?.positions || 0) > 0 ? t('market_exposure_active') : t('no_exposure')}
-                                            </span>
-                                         </div>
-                                    </StatCard>
-                                </div>
-
-                                {/* Bottom Panels Row */}
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-6 h-full min-h-[500px]">
-                                    <div className="lg:col-span-8 flex flex-col gap-6 h-full">
-                                        <RiskPanel initialData={initialData} nextNews={nextNews} />
+                                        <StatCard 
+                                            title={t('open_positions')} 
+                                            value={liveData?.positions || 0}
+                                            icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                                        >
+                                             <div className="flex items-center gap-2 mt-4 p-2 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 dark:border-emerald-500/10">
+                                                <span className="relative flex h-2 w-2">
+                                                  {(liveData?.positions || 0) > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75"></span>}
+                                                  <span className={`relative inline-flex rounded-full h-2 w-2 ${(liveData?.positions || 0) > 0 ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-zinc-600'}`}></span>
+                                                </span>
+                                                <span className={`text-[10px] font-medium uppercase tracking-wide ${(liveData?.positions || 0) > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-500'}`}>
+                                                    {(liveData?.positions || 0) > 0 ? t('market_exposure_active') : t('no_exposure')}
+                                                </span>
+                                             </div>
+                                        </StatCard>
                                     </div>
-                                    
-                                    <div className="lg:col-span-4 h-full">
-                                        <EnginePanel 
-                                            mt5Path={mt5Path} 
-                                            onPathChange={setMt5Path} 
-                                            logs={logs} 
-                                            isRunning={isRunning}
-                                            onToggle={handleToggleEngine}
-                                        />
+
+                                    {}
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-6 h-full min-h-[500px]">
+                                        <div className="lg:col-span-8 flex flex-col gap-6 h-full">
+                                            <RiskPanel initialData={initialData} nextNews={nextNews} />
+                                        </div>
+                                        
+                                        <div className="lg:col-span-4 h-full">
+                                            <EnginePanel 
+                                                mt5Path={mt5Path} 
+                                                onPathChange={setMt5Path} 
+                                                logs={logs} 
+                                                isRunning={isRunning}
+                                                onToggle={handleToggleEngine}
+                                                onClearLogs={() => setLogs([])}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* TAB 2: STRATEGY MANAGER (Persists state using hidden class) */}
-                            <div className={`h-full animate-fade-in ${activeTab === 'strategies' ? 'block' : 'hidden'}`}>
-                                <StrategyPanel 
-                                    strategies={strategies}
-                                    onStrategiesChange={setStrategies} 
-                                    onUpdateConfig={handleStrategyConfigUpdate}
-                                />
-                            </div>
+                                {}
+                                {/* TAB 2: STRATEGY MANAGER (Persists state using hidden class) */}
+                                <div className={`h-full animate-fade-in ${activeTab === 'strategies' ? 'block' : 'hidden'}`}>
+                                    <StrategyPanel 
+                                        strategies={strategies}
+                                        onStrategiesChange={setStrategies} 
+                                        onUpdateConfig={handleStrategyConfigUpdate}
+                                    />
+                                </div>
 
-                            {/* TAB 3: AI BUILDER / EDUCATION (Persists state using hidden class) */}
-                            <div className={`h-full animate-fade-in ${activeTab === 'education' ? 'block' : 'hidden'}`}>
-                                <EducationPanel />
-                            </div>
+                                {/* TAB 3: AI BUILDER / EDUCATION (Persists state using hidden class) */}
+                                <div className={`h-full animate-fade-in ${activeTab === 'education' ? 'block' : 'hidden'}`}>
+                                    <EducationPanel />
+                                </div>
 
                         </div>
                     </div>

@@ -3,7 +3,7 @@
     "wu_enabled": false,
     "wu_candles": 500,
     "nf_enabled": true,
-    "nf_eur": true,
+    "nf_eur": false,
     "nf_usd": true,
     "nf_before": "30",
     "nf_after": "30",
@@ -12,6 +12,6 @@
     "pc_enabled": false,
     "pc_volume": 50,
     "pc_trigger": 2,
-    "tl_enabled": true,
+    "tl_enabled": false,
     "tl_trigger": "100"
 }

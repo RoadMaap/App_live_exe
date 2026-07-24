@@ -21,8 +21,12 @@ class Strategy:
     def prepare_indicators(self, data, candle_type='STANDARD'):
         """
         Calculates Indicators.
+        ⚠️ PRO TIP: ALWAYS use int() or float() when reading self.params to prevent UI string errors!
         """
-        # Example: data['EMA'] = ta.ema(data['close'], length=self.params.get('EMA_LEN', 50))
+        # --- Safe Parameter Extraction Example ---
+        # ema_len = int(self.params.get('EMA_LEN', 50))
+        # data['EMA'] = ta.ema(data['close'], length=ema_len)
+        
         data.dropna(inplace=True)
         return data
 
@@ -34,13 +38,13 @@ class Strategy:
         relevant_data = history.iloc[:-2] 
         if len(relevant_data) < length: return None, None
         
-        swing_high = relevant_data['high'].rolling(window=length).max().iloc[-1]
-        swing_low = relevant_data['low'].rolling(window=length).min().iloc[-1]
+        swing_high = float(relevant_data['high'].rolling(window=length).max().iloc[-1])
+        swing_low = float(relevant_data['low'].rolling(window=length).min().iloc[-1])
         return swing_high, swing_low
 
     def check_entry_signal(self, history_slice):
-        # 1. Validation
-        min_len = self.params.get('MIN_LOOKBACK', 50)
+        # 1. Validation & Safe Parameters
+        min_len = int(self.params.get('MIN_LOOKBACK', 50))
         if len(history_slice) < min_len: return None, None, None, None
 
         # 2. Candle Definitions
@@ -48,12 +52,12 @@ class Strategy:
         current_candle = history_slice.iloc[-1]  # Market Open
         
         trade_type = None
-        entry_price = current_candle['open']
+        entry_price = float(current_candle['open'])
         stop_loss = 0.0
         take_profit = 0.0
 
         # --- LOGIC START ---
-        # (AI LOGIC HERE)
+        # (AI LOGIC HERE - Note to AI: Always wrap self.params in int() or float())
         # --- LOGIC END ---
 
         if trade_type:
@@ -70,16 +74,8 @@ class Strategy:
         Visual debugging for Backtest Reports.
         Add indicators here to see them on the chart.
         """
-        # 1. Example: Overlay EMA on Main Chart (Panel 0)
         # if 'EMA' in plot_data.columns:
         #     ap.append(mpf.make_addplot(plot_data['EMA'], panel=0, color='blue', width=1.0))
-        
-        # 2. Example: Separate RSI Panel (Panel 1)
-        # if 'RSI' in plot_data.columns:
-        #     ap.append(mpf.make_addplot(plot_data['RSI'], panel=1, color='purple', ylabel='RSI'))
-        
-        # 3. Example: Buy/Sell Markers (Already handled by engine, no need to add here)
-
         return ap, (3, 1) # Aspect Ratio (Main: 3, Indicator: 1)
 `;
 

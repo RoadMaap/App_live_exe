@@ -1,7 +1,6 @@
 # ==============================================================================
-# ULTIMATE MULTI LIVE ENGINE (v4.0.0) - UNIVERSAL ADAPTER MODE
-# Features: Ultimate Mirror Sync (Gap Sim), Ghost Recovery, Edge Detection
-# Architecture: Pure Execution Core with Decoupled ErrorManager & UI Logging
+# ULTIMATE MULTI LIVE ENGINE (v4.5.0) - UNIVERSAL ADAPTER MODE
+# Features: Ultimate Mirror Sync, Ghost Recovery, Zero-Crash Execution Core
 # ==============================================================================
 
 import os
@@ -9,7 +8,6 @@ import sys
 import math
 import traceback
 import time as os_time
-from datetime import datetime, timedelta
 import pandas as pd
 import MetaTrader5 as mt5
 
@@ -21,7 +19,6 @@ try:
     from Shared_Modules.Risk_management_Class import *
     from Shared_Modules.Margin_usage import MarginManager
     from Target_lock import TargetLockManager
-    # Import our separated Error Handler & Logger
     from Core_ErrorHandler import ErrorManager, ui_log
 except ImportError as e:
     print(f"❌ Critical Core Engine Import Error: {e}")
@@ -104,7 +101,7 @@ class MT5Interface:
         }
         
         res = mt5.order_send(request)
-        if res and res.retcode == 10030:
+        if res and res.retcode == 10030: # Fallback to IOC if FOK is not supported
             request["type_filling"] = mt5.ORDER_FILLING_IOC
             res = mt5.order_send(request)
 
@@ -186,10 +183,11 @@ class LiveSignalEngine:
             
             if df is None or len(df) < 5: continue
                 
+            # 🚨 BUG FIX: Only 1 return value expected from safe_execute
             if hasattr(strat, 'prepare_indicators'):
-                df, success = ErrorManager.safe_execute(strat_id, 'prepare_indicators', strat.prepare_indicators, df.copy(), s_config.get('candle_type', 'STANDARD'))
-                if not success or df is None: continue
-            else: continue
+                processed_df = ErrorManager.safe_execute(strat_id, 'prepare_indicators', strat.prepare_indicators, df.copy(), s_config.get('candle_type', 'STANDARD'))
+                if processed_df is None: continue
+                df = processed_df
 
             ui_log('warning', f"⏳ Fast-forwarding {len(df)} candles for {strat_id}...")
             
@@ -246,7 +244,8 @@ class LiveSignalEngine:
                 # Check Entry Signal Safely
                 trade_type, ep, sl, tp = None, None, None, None
                 if hasattr(strat, 'check_entry_signal'):
-                    res, _ = ErrorManager.safe_execute(strat_id, 'check_entry_signal', strat.check_entry_signal, history_slice)
+                    # 🚨 BUG FIX: Only 1 return value expected
+                    res = ErrorManager.safe_execute(strat_id, 'check_entry_signal', strat.check_entry_signal, history_slice)
                     if res and isinstance(res, tuple) and len(res) == 4:
                         trade_type, ep, sl, tp = res
                 
@@ -358,10 +357,15 @@ class LiveSignalEngine:
                     df_recovery = self.mt5.get_candles(symbol, s_config['TIMEFRAME_MT5'], s_config.get('LOOKBACK_PERIOD', 100))
                     if df_recovery is not None:
                         if hasattr(strat, 'prepare_indicators'):
-                            df_recovery, _ = ErrorManager.safe_execute(strat_id, 'prepare_indicators', strat.prepare_indicators, df_recovery, s_config.get('candle_type', 'STANDARD'))
+                            # 🚨 BUG FIX
+                            rec_res = ErrorManager.safe_execute(strat_id, 'prepare_indicators', strat.prepare_indicators, df_recovery, s_config.get('candle_type', 'STANDARD'))
+                            if rec_res is not None: df_recovery = rec_res
+                            
                         for rule in s_config.get('MONEY_MANAGEMENT_MODE', []):
                             if hasattr(rule, 'prepare_indicators'): 
-                                df_recovery, _ = ErrorManager.safe_execute(strat_id, f'MM_{type(rule).__name__}', rule.prepare_indicators, df_recovery)
+                                # 🚨 BUG FIX
+                                mm_res = ErrorManager.safe_execute(strat_id, f'MM_{type(rule).__name__}', rule.prepare_indicators, df_recovery)
+                                if mm_res is not None: df_recovery = mm_res
 
                         if execute_market:
                             success = self._execute_order(t_type, g_entry, g_sl, g_tp, s_config, df_recovery, current_candle_time, is_recovery=True)
@@ -392,21 +396,26 @@ class LiveSignalEngine:
         if df is None: return
 
         if hasattr(strat, 'prepare_indicators'):
-            df, success = ErrorManager.safe_execute(strat_id, 'prepare_indicators', strat.prepare_indicators, df.copy(), s_config.get('candle_type', 'STANDARD'))
-            if not success or df is None: return
+            # 🚨 BUG FIX
+            proc_df = ErrorManager.safe_execute(strat_id, 'prepare_indicators', strat.prepare_indicators, df.copy(), s_config.get('candle_type', 'STANDARD'))
+            if proc_df is None: return
+            df = proc_df
         
         for rule in s_config.get('MONEY_MANAGEMENT_MODE', []):
             if hasattr(rule, 'prepare_indicators'):
-                df, _ = ErrorManager.safe_execute(strat_id, f'MM_{type(rule).__name__}', rule.prepare_indicators, df)
+                # 🚨 BUG FIX
+                mm_df = ErrorManager.safe_execute(strat_id, f'MM_{type(rule).__name__}', rule.prepare_indicators, df)
+                if mm_df is not None: df = mm_df
 
         trade_type, entry_anchor, sl_anchor, tp_anchor = None, None, None, None
         if hasattr(strat, 'check_entry_signal'):
-            res, _ = ErrorManager.safe_execute(strat_id, 'check_entry_signal', strat.check_entry_signal, df)
+            # 🚨 BUG FIX
+            res = ErrorManager.safe_execute(strat_id, 'check_entry_signal', strat.check_entry_signal, df)
             if res and isinstance(res, tuple) and len(res) == 4:
                 trade_type, entry_anchor, sl_anchor, tp_anchor = res
 
         if trade_type:
-            # Soft Time Filters (Dashboard settings lock execution, not calculation)
+            # Soft Time Filters
             allowed_days = s_config.get('allowed_days', [0, 1, 2, 3, 4, 5, 6])
             if current_candle_time.dayofweek not in allowed_days: return
 
@@ -440,7 +449,6 @@ class LiveSignalEngine:
             final_lot = self.mt5.normalize_volume(symbol, safe_raw_lot)
 
             if final_lot > 0:
-                # Dynamic Universal Comments
                 tag = "🔥 [DISCOUNT RECOVERY]" if is_recovery else "💎 Signal Confirmed"
                 strat_short = str(s_config['strategy_id'])[:6]
                 order_comment = f"{symbol}-Ghost" if is_recovery else f"{symbol}-{strat_short}"
@@ -502,7 +510,8 @@ class LiveSignalEngine:
         if not isinstance(risk_rules, list): risk_rules = [risk_rules]
         for rule in risk_rules:
             if hasattr(rule, 'calculate_risk_details'):
-                res, _ = ErrorManager.safe_execute(s_config['strategy_id'], 'calculate_risk_details', rule.calculate_risk_details, context)
+                # 🚨 BUG FIX
+                res = ErrorManager.safe_execute(s_config['strategy_id'], 'calculate_risk_details', rule.calculate_risk_details, context)
                 if res:
                     if isinstance(res, list): lot = res[0].get('lot_size', lot)
                     elif isinstance(res, dict): lot = res.get('lot_size', lot)
@@ -564,20 +573,22 @@ class LivePositionManager:
             
             for rule in risk_rules:
                 if hasattr(rule, 'check_partial_exit'):
-                    vol, _ = ErrorManager.safe_execute(strat_id, 'check_partial_exit', rule.check_partial_exit, context_closed)
+                    # 🚨 BUG FIX
+                    vol = ErrorManager.safe_execute(strat_id, 'check_partial_exit', rule.check_partial_exit, context_closed)
                     if vol: self._execute_partial(mt5_pos, vol)
                 
                 if hasattr(rule, 'update_sl'):
-                    new_sl, _ = ErrorManager.safe_execute(strat_id, 'update_sl', rule.update_sl, context_closed)
+                    # 🚨 BUG FIX
+                    new_sl = ErrorManager.safe_execute(strat_id, 'update_sl', rule.update_sl, context_closed)
                     if new_sl:
                         norm_sl = self.mt5.normalize_price(mt5_pos.symbol, new_sl)
                         if norm_sl != mt5_pos.sl: self.mt5.modify_position(mt5_pos.ticket, mt5_pos.symbol, norm_sl, mt5_pos.tp)
 
         if hasattr(strat, 'check_exit_conditions'):
-            res, _ = ErrorManager.safe_execute(strat_id, 'check_exit_conditions', strat.check_exit_conditions, current_candle, df, pos_dict)
-            if res:
-                if isinstance(res, tuple) and len(res) == 2: exit_price, reason = res
-                else: exit_price, reason = res, "Strategy Custom Exit"
+            # 🚨 BUG FIX
+            res = ErrorManager.safe_execute(strat_id, 'check_exit_conditions', strat.check_exit_conditions, current_candle, df, pos_dict)
+            if res and isinstance(res, tuple) and len(res) == 2: 
+                exit_price, reason = res
                 if exit_price: self._execute_full_close(mt5_pos, exit_price, reason)
 
     def _execute_partial(self, mt5_pos, vol):
@@ -596,10 +607,14 @@ class LivePositionManager:
         if df is None or len(df) < 2: return None
         strat = s_config['strategy']
         if hasattr(strat, 'prepare_indicators'):
-            df, _ = ErrorManager.safe_execute(s_config['strategy_id'], 'prepare_indicators', strat.prepare_indicators, df, s_config.get('candle_type', 'STANDARD'))
+            # 🚨 BUG FIX
+            proc_df = ErrorManager.safe_execute(s_config['strategy_id'], 'prepare_indicators', strat.prepare_indicators, df, s_config.get('candle_type', 'STANDARD'))
+            if proc_df is not None: df = proc_df
         for rule in s_config.get('MONEY_MANAGEMENT_MODE', []):
             if hasattr(rule, 'prepare_indicators'): 
-                df, _ = ErrorManager.safe_execute(s_config['strategy_id'], f'MM_{type(rule).__name__}', rule.prepare_indicators, df)
+                # 🚨 BUG FIX
+                mm_df = ErrorManager.safe_execute(s_config['strategy_id'], f'MM_{type(rule).__name__}', rule.prepare_indicators, df)
+                if mm_df is not None: df = mm_df
         return df
 
 
@@ -609,7 +624,7 @@ class LivePositionManager:
 class LiveTrader:
     def __init__(self, config):
         self.config = config
-        ui_log('success', f"🚀 Initializing Live Trader V4.0 (Universal Mirror Sync)...")
+        ui_log('success', f"🚀 Initializing Live Trader V4.5 (Zero-Crash Edition)...")
         self.mt5_interface = MT5Interface(config.get("MT5_PATH"))
         
         acc_info = self.mt5_interface.get_account_info()
@@ -626,7 +641,6 @@ class LiveTrader:
         net_warned = False
         while True:
             try:
-                # Network Heartbeat
                 if not self.mt5_interface.is_connected():
                     if not net_warned:
                         ui_log('error', "⚠️ [NETWORK ALERT] Connection to Broker Lost. Waiting...")
@@ -651,6 +665,5 @@ class LiveTrader:
                 mt5.shutdown()
                 break
             except Exception as e:
-                # Fatal Loop Crash Protection
                 ErrorManager.catch_strategy_error("CORE_ENGINE", "Main_Loop", e)
                 os_time.sleep(5)

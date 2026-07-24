@@ -14,7 +14,7 @@ const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const selectedLabel = options.find(opt => opt.value === value)?.label || value;
+    const selectedLabel = (options || []).find(opt => opt.value === value)?.label || value;
 
     return (
         <div className="relative w-full group" ref={containerRef}>
@@ -24,7 +24,7 @@ const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full flex items-center justify-between bg-[#18181b] border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 transition-all outline-none hover:border-white/10 hover:bg-[#1a1a20] ${isOpen ? 'border-emerald-500/50 bg-[#1a1a20]' : ''}`}
             >
-                <span className="flex items-center gap-2 truncate">
+                <span className="flex items-center gap-2 truncate" dir="ltr">
                     {prefixIcon && <span className="text-emerald-500">{prefixIcon}</span>}
                     {selectedLabel}
                 </span>
@@ -39,7 +39,7 @@ const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
 
             <div className={`absolute left-0 top-full mt-1 w-full bg-[#18181b] border border-white/10 rounded-lg shadow-xl overflow-hidden z-50 origin-top transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2'}`}>
                 <div className="max-h-48 overflow-y-auto custom-scroll py-1">
-                    {options.map((opt) => (
+                    {(options || []).map((opt) => (
                         <div 
                             key={opt.value}
                             onClick={() => {
@@ -47,6 +47,7 @@ const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
                                 setIsOpen(false);
                             }}
                             className={`px-3 py-2 text-xs cursor-pointer flex items-center gap-2 transition-colors ${value === opt.value ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`}
+                            dir="ltr"
                         >
                             <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 transition-opacity ${value === opt.value ? 'opacity-100' : 'opacity-0'}`}></div>
                             {opt.label}
@@ -71,27 +72,31 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
     
     const validSecondsList = [60, 300, 900, 1800, 3600, 14400, 86400];
 
-    // لیست سیاه کلمات ممنوعه برای نمایش داده نشدن در بخش پارامترها
     const blacklistParams = [
         'allowed_days', 'allowdays', 'allow_days', 'alloweddays', 'allowed_day',
-        'killzones', 'killzone', 'kill_zones', 'kill_zone', 'kill_zones_list'
+        'killzones', 'killzone', 'kill_zones', 'kill_zone', 'kill_zones_list',
+        'allow_day', 'kill_zone_list'
     ];
 
     const toggleExpand = (name) => {
         setExpandedStrategies(prev => 
-            prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+            (prev || []).includes(name) ? prev.filter(n => n !== name) : [...(prev || []), name]
         );
     };
 
     const handleImport = async () => {
         setIsLoading(true);
         if(window.eel) {
-            const path = await window.eel.open_strategy_file_dialog()();
-            if (path) {
-                const res = await window.eel.load_custom_strategy(path)();
-                if (res.success) {
-                    onStrategiesChange(res.strategies);
+            try {
+                const path = await window.eel.open_strategy_file_dialog()();
+                if (path) {
+                    const res = await window.eel.load_custom_strategy(path)();
+                    if (res?.success && res?.strategies) {
+                        onStrategiesChange(res.strategies);
+                    }
                 }
+            } catch (err) {
+                console.error("Import Error:", err);
             }
         }
         setIsLoading(false);
@@ -100,8 +105,12 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
     const handleDelete = async (name, e) => {
         e.stopPropagation();
         if(window.eel) {
-            const newStrategies = await window.eel.remove_strategy(name)();
-            onStrategiesChange(newStrategies);
+            try {
+                const newStrategies = await window.eel.remove_strategy(name)();
+                if (newStrategies) onStrategiesChange(newStrategies);
+            } catch (err) {
+                console.error("Delete Error:", err);
+            }
         }
     };
 
@@ -111,36 +120,59 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         }
     };
 
-    const handleParamChange = (strategyName, paramKey, newValue, type) => {
-        let finalValue = newValue;
-        if (type === 'number') {
-            finalValue = parseFloat(newValue);
-            if (isNaN(finalValue) && newValue !== '' && newValue !== '-') return;
-        } else if (type === 'boolean') {
-            finalValue = newValue === 'true';
-        }
-
+    // Updated handleParamChange: Just updates local UI state, allowing string values (like "1.")
+    const handleParamChange = (strategyName, paramKey, newValue) => {
         onStrategiesChange(prevStrategies => ({
             ...prevStrategies,
             [strategyName]: {
-                ...prevStrategies[strategyName],
+                ...(prevStrategies?.[strategyName] || {}),
                 params: {
-                    ...prevStrategies[strategyName].params,
-                    [paramKey]: finalValue
+                    ...(prevStrategies?.[strategyName]?.params || {}),
+                    [paramKey]: newValue
                 }
             }
         }));
     };
 
+    // New handler for onBlur: Parses to float and saves
+    const handleParamBlur = (strategyName, paramKey, currentValue) => {
+        let finalValue = currentValue;
+        
+        if (typeof currentValue === 'string') {
+            // Attempt to parse to float. Handle empty string case.
+            if (currentValue.trim() === '') {
+                finalValue = ''; // Or 0, depending on preference
+            } else {
+                const parsed = parseFloat(currentValue);
+                finalValue = isNaN(parsed) ? '' : parsed;
+            }
+        }
+
+        // Update UI state with the parsed (clean) value
+        onStrategiesChange(prevStrategies => ({
+            ...prevStrategies,
+            [strategyName]: {
+                ...(prevStrategies?.[strategyName] || {}),
+                params: {
+                    ...(prevStrategies?.[strategyName]?.params || {}),
+                    [paramKey]: finalValue
+                }
+            }
+        }));
+
+        // Save the parsed value to the backend
+        saveParamToBackend(strategyName, paramKey, finalValue);
+    };
+
     const handleConfigChange = (strategyName, configKey, value) => {
-        const currentConfig = strategies[strategyName].config;
+        const currentConfig = strategies?.[strategyName]?.config || {};
         const newConfig = { ...currentConfig, [configKey]: value };
         onUpdateConfig(strategyName, newConfig);
     };
 
     const handleSecondsBlur = (strategyName, inputValue) => {
-        const currentConfig = strategies[strategyName].config;
-        const minAllowed = timeframeToSeconds[currentConfig.timeframe] || 300;
+        const currentConfig = strategies?.[strategyName]?.config || {};
+        const minAllowed = timeframeToSeconds[currentConfig?.timeframe] || 300;
         
         let val = parseInt(inputValue);
         if (isNaN(val)) val = minAllowed;
@@ -159,8 +191,8 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
     };
 
     const toggleDay = (strategyName, dayIndex) => {
-        const currentConfig = strategies[strategyName].config;
-        const currentDays = currentConfig.allowed_days || [];
+        const currentConfig = strategies?.[strategyName]?.config || {};
+        const currentDays = currentConfig?.allowed_days || [];
         let newDays;
         if (currentDays.includes(dayIndex)) {
             newDays = currentDays.filter(d => d !== dayIndex);
@@ -176,14 +208,14 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
     };
 
     const removeKillzone = (strategyName, currentZones, index) => {
-        const newZones = currentZones.filter((_, i) => i !== index);
+        const newZones = (currentZones || []).filter((_, i) => i !== index);
         handleConfigChange(strategyName, 'killzones', newZones);
     };
 
     const updateKillzoneTime = (strategyName, currentZones, index, type, value) => {
         if (!/^[0-9:]*$/.test(value)) return;
         if (value.length > 5) return;
-        const newZones = [...currentZones];
+        const newZones = [...(currentZones || [])];
         const currentString = newZones[index] || "-";
         let [start, end] = currentString.includes('-') ? currentString.split('-') : ["", ""];
         if (type === 'start') newZones[index] = `${value}-${end}`;
@@ -210,7 +242,7 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         if (formatted !== value) updateKillzoneTime(strategyName, currentZones, index, type, formatted);
     };
 
-    const strategyList = Object.entries(strategies);
+    const strategyList = Object.entries(strategies || {});
 
     const timeframeOptions = [
         { label: 'M1 - 1 Minute', value: 'M1' }, { label: 'M5 - 5 Minutes', value: 'M5' },
@@ -258,14 +290,14 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                     </div>
                 ) : (
                     strategyList.map(([name, data]) => {
-                        const isExpanded = expandedStrategies.includes(name);
-                        const config = data.config || {};
-                        const killzones = config.killzones || [];
-                        const currentSecondsDefault = timeframeToSeconds[config.timeframe] || 300;
+                        if (!data) return null; 
+                        
+                        const isExpanded = (expandedStrategies || []).includes(name);
+                        const config = data?.config || {};
+                        const killzones = config?.killzones || [];
 
-                        // فیلتر کلمات ممنوعه (جلوگیری از نمایش متغیرهای زمان و روزها در لیست پارامترها)
-                        const filteredParams = Object.entries(data.params || {}).filter(([key]) => {
-                            const normalizedKey = key.trim().toLowerCase();
+                        const filteredParams = Object.entries(data?.params || {}).filter(([key]) => {
+                            const normalizedKey = String(key).trim().toLowerCase();
                             return !blacklistParams.includes(normalizedKey);
                         });
 
@@ -277,13 +309,13 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                 <div onClick={() => toggleExpand(name)} className="p-4 flex items-center justify-between cursor-pointer select-none group relative z-20 bg-[#121215]">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-11 h-11 rounded-lg flex items-center justify-center font-mono font-bold text-sm shadow-inner transition-colors border ${isExpanded ? 'bg-emerald-500 text-black border-emerald-400 shadow-emerald-500/20' : 'bg-[#18181b] text-zinc-500 border-white/5 group-hover:border-white/10'}`}>
-                                            {name.slice(0, 2).toUpperCase()}
+                                            {String(name).slice(0, 2).toUpperCase()}
                                         </div>
                                         <div>
                                             <h4 className={`text-sm font-bold transition-colors ${isExpanded ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'}`}>{name}</h4>
-                                            <div className="flex items-center gap-2 mt-1.5">
-                                                {config.symbol && (<span className="text-[10px] font-bold font-mono text-zinc-300 bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5">{config.symbol}</span>)}
-                                                <span className="text-[10px] font-bold font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/10">{config.timeframe || 'M5'}</span>
+                                            <div className="flex items-center gap-2 mt-1.5" dir="ltr">
+                                                {config?.symbol && (<span className="text-[10px] font-bold font-mono text-zinc-300 bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5">{config.symbol}</span>)}
+                                                <span className="text-[10px] font-bold font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/10">{config?.timeframe || 'M5'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -302,16 +334,54 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                         <div className="px-5 pb-6 border-t border-white/5 bg-[#0e0e11]">
                                             
                                             <div className="mt-5 mb-6">
+                                                <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Algorithm Parameters</h5>
+                                                {paramCount === 0 ? (
+                                                    <div className="text-center text-zinc-600 py-4 text-xs italic bg-[#151518] rounded-xl border border-white/5">No configurable parameters detected.</div>
+                                                ) : (
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                        {filteredParams.map(([key, val]) => {
+                                                            // Empty string is no longer an error, just an empty field
+                                                            const isEmpty = val === '';
+                                                            
+                                                            return (
+                                                                <div key={key} className={`group relative bg-[#18181b] p-3 rounded-xl border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/50 ${isEmpty ? 'border-rose-500/50 shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] focus-within:!border-rose-500' : 'border-white/5 hover:border-white/10 focus-within:!border-blue-500/50'}`}>
+                                                                    <div className="flex justify-between items-start mb-1">
+                                                                        <label className={`text-[9px] uppercase font-bold tracking-wider truncate transition-colors ${isEmpty ? 'text-rose-500' : 'text-zinc-500 group-focus-within:text-blue-400'}`} title={key}>
+                                                                            {key}
+                                                                        </label>
+                                                                        {isEmpty && (
+                                                                            <span className="text-[8px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse">
+                                                                                EMPTY
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={val !== undefined && val !== null ? val : ''}
+                                                                        onChange={(e) => handleParamChange(name, key, e.target.value)}
+                                                                        onBlur={(e) => handleParamBlur(name, key, e.target.value)}
+                                                                        dir="ltr"
+                                                                        className={`w-full bg-transparent border-none outline-none p-0 text-sm font-mono font-bold placeholder-zinc-700 transition-colors ${isEmpty ? 'text-rose-400' : 'text-zinc-200 focus:text-white'}`}
+                                                                    />
+                                                                    <div className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none ${isEmpty ? 'bg-rose-500/5' : 'bg-blue-500/5'}`}></div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="mt-5 mb-6">
                                                 <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Market Configuration</h5>
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                                     <div>
                                                         <label className="text-[9px] text-zinc-500 font-bold mb-1.5 block">SYMBOL</label>
-                                                        <input type="text" value={config.symbol || ''} onChange={(e) => handleConfigChange(name, 'symbol', e.target.value.toUpperCase())} className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-white font-mono uppercase transition-all outline-none hover:border-white/10" />
+                                                        <input type="text" value={config?.symbol || ''} onChange={(e) => handleConfigChange(name, 'symbol', e.target.value.toUpperCase())} dir="ltr" className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-white font-mono uppercase transition-all outline-none hover:border-white/10" />
                                                     </div>
                                                     
                                                     <CustomSelect 
                                                         label="TIMEFRAME"
-                                                        value={config.timeframe || 'M5'}
+                                                        value={config?.timeframe || 'M5'}
                                                         options={timeframeOptions}
                                                         onChange={(val) => {
                                                             const seconds = timeframeToSeconds[val] || 300;
@@ -326,12 +396,12 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
 
                                                     <div>
                                                         <label className="text-[9px] text-zinc-500 font-bold mb-1.5 block">MAGIC NO.</label>
-                                                        <input type="number" value={config.magic_number || 0} onChange={(e) => handleConfigChange(name, 'magic_number', parseInt(e.target.value))} className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-blue-400 font-mono transition-all outline-none hover:border-white/10" />
+                                                        <input type="number" value={config?.magic_number || 0} onChange={(e) => handleConfigChange(name, 'magic_number', parseInt(e.target.value))} dir="ltr" className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-blue-400 font-mono transition-all outline-none hover:border-white/10" />
                                                     </div>
                                                     
                                                     <CustomSelect 
                                                         label="CANDLE TYPE"
-                                                        value={config.candle_type || 'STANDARD'}
+                                                        value={config?.candle_type || 'STANDARD'}
                                                         options={candleOptions}
                                                         onChange={(val) => handleConfigChange(name, 'candle_type', val)}
                                                     />
@@ -341,7 +411,7 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                                     <label className="text-[9px] text-zinc-500 font-bold mb-2 block">ACTIVE TRADING DAYS</label>
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {daysOfWeek.map(d => (
-                                                            <button key={d} onClick={() => toggleDay(name, d)} className={`flex-1 min-w-[40px] py-1.5 rounded text-[10px] border font-medium transition-all ${config.allowed_days?.includes(d) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-[#18181b] border-white/5 text-zinc-600 hover:bg-white/5'}`}>{dayLabels[d]}</button>
+                                                            <button key={d} onClick={() => toggleDay(name, d)} className={`flex-1 min-w-[40px] py-1.5 rounded text-[10px] border font-medium transition-all ${(config?.allowed_days || []).includes(d) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-[#18181b] border-white/5 text-zinc-600 hover:bg-white/5'}`}>{dayLabels[d]}</button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -355,7 +425,7 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                                 <div className="bg-[#151518] rounded-xl border border-white/5 flex items-center relative transition-colors hover:border-white/10 p-1 gap-1">
                                                     <div className="w-[180px]">
                                                         <CustomSelect 
-                                                            value={config.risk_mode || 'fixed_usd'}
+                                                            value={config?.risk_mode || 'fixed_usd'}
                                                             options={riskModeOptions}
                                                             onChange={(val) => handleConfigChange(name, 'risk_mode', val)}
                                                         />
@@ -363,13 +433,14 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                                     <div className="flex-1 relative h-full">
                                                         <input 
                                                             type="number" 
-                                                            value={config.risk_value || 0} 
+                                                            value={config?.risk_value || 0} 
                                                             onChange={(e) => handleConfigChange(name, 'risk_value', e.target.value)}
+                                                            dir="ltr"
                                                             className="w-full h-full bg-transparent border-none outline-none text-emerald-400 font-mono font-bold text-sm px-4 py-2 placeholder-zinc-700"
                                                             placeholder="0.00"
                                                         />
                                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-600 pointer-events-none">
-                                                            {config.risk_mode === 'percentage' ? '%' : config.risk_mode === 'fixed_lot' ? 'LOT' : 'USD'}
+                                                            {config?.risk_mode === 'percentage' ? '%' : config?.risk_mode === 'fixed_lot' ? 'LOT' : 'USD'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -384,82 +455,37 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                                             return (
                                                                 <div key={idx} className="flex items-center gap-2 group animate-fade-in-down">
                                                                     <div className="flex-1 flex items-center gap-3 bg-black/30 p-1.5 rounded-lg border border-white/5 focus-within:border-indigo-500/50 transition-colors hover:border-white/10">
-                                                                        <div className="relative w-full"><input type="text" placeholder="00:00" value={start} onChange={(e) => updateKillzoneTime(name, killzones, idx, 'start', e.target.value)} onBlur={(e) => handleTimeBlur(name, killzones, idx, 'start', e.target.value)} className="w-full bg-transparent border-none text-center text-xs text-white font-mono focus:ring-0 focus:outline-none placeholder-zinc-700" /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-zinc-600 font-bold pointer-events-none">FROM</span></div>
+                                                                        <div className="relative w-full"><input type="text" placeholder="00:00" value={start} onChange={(e) => updateKillzoneTime(name, killzones, idx, 'start', e.target.value)} onBlur={(e) => handleTimeBlur(name, killzones, idx, 'start', e.target.value)} dir="ltr" className="w-full bg-transparent border-none text-center text-xs text-white font-mono focus:ring-0 focus:outline-none placeholder-zinc-700" /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-zinc-600 font-bold pointer-events-none">FROM</span></div>
                                                                         <div className="w-px h-4 bg-white/10"></div>
-                                                                        <div className="relative w-full"><input type="text" placeholder="00:00" value={end} onChange={(e) => updateKillzoneTime(name, killzones, idx, 'end', e.target.value)} onBlur={(e) => handleTimeBlur(name, killzones, idx, 'end', e.target.value)} className="w-full bg-transparent border-none text-center text-xs text-white font-mono focus:ring-0 focus:outline-none placeholder-zinc-700" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-zinc-600 font-bold pointer-events-none">TO</span></div>
+                                                                        <div className="relative w-full"><input type="text" placeholder="00:00" value={end} onChange={(e) => updateKillzoneTime(name, killzones, idx, 'end', e.target.value)} onBlur={(e) => handleTimeBlur(name, killzones, idx, 'end', e.target.value)} dir="ltr" className="w-full bg-transparent border-none text-center text-xs text-white font-mono focus:ring-0 focus:outline-none placeholder-zinc-700" /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-zinc-600 font-bold pointer-events-none">TO</span></div>
                                                                     </div>
-                                                                    <button onClick={() => removeKillzone(name, killzones, idx)} className="p-2 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all opacity-70 hover:opacity-100"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-                                                                </div>
-                                                            )
-                                                        })}
-                                                        <button onClick={() => addKillzone(name, killzones)} className="w-full py-2 rounded-lg border border-dashed border-zinc-700 text-[10px] text-zinc-400 hover:text-white hover:border-zinc-500 hover:bg-white/5 transition-all flex items-center justify-center gap-2"><span className="w-4 h-4 rounded bg-zinc-700 flex items-center justify-center text-xs">+</span>Add Trading Window</button>
-                                                    </div>
-                                                </div>
-
-                                                <div className="lg:col-span-4 flex flex-col">
-                                                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>Delay between logic checks</h5>
-                                                    <div className="bg-[#151518] rounded-xl border border-white/5 p-4 flex-1 flex flex-col justify-center items-center text-center relative overflow-hidden group hover:border-white/10 transition-colors">
-                                                        <div className="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition-colors"></div>
-                                                        <label className="text-[9px] text-zinc-400 font-bold mb-2 relative z-10">CYCLE SECONDS</label>
-                                                        
-                                                        <input 
-                                                            type="number" 
-                                                            value={config.TIMEFRAME_SECONDS || currentSecondsDefault} 
-                                                            onChange={(e) => handleConfigChange(name, 'TIMEFRAME_SECONDS', e.target.value)} 
-                                                            onBlur={(e) => handleSecondsBlur(name, e.target.value)}
-                                                            className="bg-transparent border-b border-yellow-500/30 w-24 text-center text-2xl font-bold text-yellow-400 focus:border-yellow-500 outline-none relative z-10 font-mono transition-all" 
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* --- PARAMS SECTION (WITH ZERO-DETECTION) --- */}
-                                            <div>
-                                                <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Algorithm Parameters</h5>
-                                                {paramCount === 0 ? (
-                                                    <div className="text-center text-zinc-600 py-4 text-xs italic bg-[#151518] rounded-xl border border-white/5">No configurable parameters detected.</div>
-                                                ) : (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                                        {filteredParams.map(([key, val]) => {
-                                                            
-                                                            // منطق دقیق برای تشخیص عدد 0 (چه رشته باشد چه عدد)
-                                                            const isZeroError = val === 0 || val === "0" || parseFloat(val) === 0;
-                                                            
-                                                            return (
-                                                                <div key={key} className={`group relative bg-[#18181b] p-3 rounded-xl border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/50 ${isZeroError ? 'border-rose-500/50 shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] focus-within:!border-rose-500' : 'border-white/5 hover:border-white/10 focus-within:!border-blue-500/50'}`}>
-                                                                    <div className="flex justify-between items-start mb-1">
-                                                                        <label className={`text-[9px] uppercase font-bold tracking-wider truncate transition-colors ${isZeroError ? 'text-rose-500' : 'text-zinc-500 group-focus-within:text-blue-400'}`} title={key}>
-                                                                            {key}
-                                                                        </label>
-                                                                        
-                                                                        {/* برچسب چشمک‌زن وقتی مقدار صفر باشد */}
-                                                                        {isZeroError && (
-                                                                            <span className="text-[8px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse">
-                                                                                INVALID
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={val}
-                                                                        onChange={(e) => handleParamChange(name, key, e.target.value, typeof val)}
-                                                                        onBlur={(e) => {
-                                                                            let num = parseFloat(e.target.value); 
-                                                                            if(!isNaN(num) && typeof val === 'number') {
-                                                                                handleParamChange(name, key, num, 'number');
-                                                                                saveParamToBackend(name, key, num);
-                                                                            } else {
-                                                                                saveParamToBackend(name, key, e.target.value);
-                                                                            }
-                                                                        }}
-                                                                        className={`w-full bg-transparent border-none outline-none p-0 text-sm font-mono font-bold placeholder-zinc-700 transition-colors ${isZeroError ? 'text-rose-400' : 'text-zinc-200 focus:text-white'}`}
-                                                                    />
-                                                                    <div className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none ${isZeroError ? 'bg-rose-500/5' : 'bg-blue-500/5'}`}></div>
+                                                                    <button onClick={() => removeKillzone(name, killzones, idx)} className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                    </button>
                                                                 </div>
                                                             );
                                                         })}
+                                                        <button onClick={() => addKillzone(name, killzones)} className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 border-dashed rounded-lg text-xs font-bold text-zinc-400 transition-colors flex items-center justify-center gap-2">
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                                            Add Trading Window
+                                                        </button>
                                                     </div>
-                                                )}
+                                                </div>
+                                                
+                                                <div className="lg:col-span-4">
+                                                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Delay Between Logic Checks</h5>
+                                                    <div className="bg-[#151518] rounded-xl border border-white/5 p-4 flex flex-col items-center justify-center h-[calc(100%-28px)]">
+                                                        <input 
+                                                            type="number" 
+                                                            value={config?.TIMEFRAME_SECONDS || 300} 
+                                                            onChange={(e) => handleConfigChange(name, 'TIMEFRAME_SECONDS', e.target.value)}
+                                                            onBlur={(e) => handleSecondsBlur(name, e.target.value)}
+                                                            dir="ltr"
+                                                            className="w-full text-center bg-transparent border-none text-2xl font-bold text-orange-400 font-mono outline-none mb-1"
+                                                        />
+                                                        <span className="text-[10px] text-zinc-500 font-bold uppercase">CYCLE SECONDS</span>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                         </div>

@@ -5,6 +5,7 @@ const EducationPanel = () => {
     const { t } = useLanguage();
     const [isCopied, setIsCopied] = useState(false);
 
+    // قالب فوق‌پیشرفته، شامل گاردریل‌ها و قوانین استخراج شده از کدهای لایو
     const templateCode = `import pandas as pd
 import numpy as np
 import pandas_ta as ta
@@ -13,43 +14,34 @@ import mplfinance as mpf
 class Strategy:
     def __init__(self, params):
         """
-        Strategy Parameters:
-        Example: {'EMA_LEN': 50, 'RSI_LEN': 14, 'RISK_REWARD': 2.0}
+        ⚠️ AI INSTRUCTION - STRICT GUARDRAILS (MUST FOLLOW):
+        1. NO LOOKAHEAD BIAS: NEVER use iloc[-1]['close'], ['high'], or ['low'] for logic. 
+           ONLY use iloc[-1]['open'] as the entry_price. All logic MUST use iloc[-2] (Confirmed Candle).
+        2. ZERO DIVISION: ALWAYS handle division by zero. If calculating range, use: (high - low).replace(0, 0.00001).
+        3. PANDAS_TA QUIRKS: Multi-column indicators (MACD, BBANDS) change column names based on params.
+           ALWAYS extract them using index: macd_df = ta.macd(close); data['MACD'] = macd_df.iloc[:, 0]
+        4. SAFE CASTING: ALWAYS wrap params in int() or float() (e.g., length=int(self.params.get('LEN', 14))).
+        5. BOOLEAN SAFETY: ALWAYS wrap pandas boolean extractions in bool() to avoid Truth Value errors.
+           Example: is_bullish = bool(signal_candle['close'] > signal_candle['open'])
         """
         self.params = params
 
     def prepare_indicators(self, data, candle_type='STANDARD'):
-        """
-        Calculates Indicators.
-        ⚠️ PRO TIP: ALWAYS use int() or float() when reading self.params to prevent UI string errors!
-        """
-        # --- Safe Parameter Extraction Example ---
+        # ⚠️ Example of SAFE indicator extraction:
         # ema_len = int(self.params.get('EMA_LEN', 50))
         # data['EMA'] = ta.ema(data['close'], length=ema_len)
         
         data.dropna(inplace=True)
         return data
 
-    def get_swing_levels(self, history, length=20):
-        """
-        HELPER: Calculates Swing High/Low for Elliott/Fibonacci.
-        Returns (swing_high, swing_low).
-        """
-        relevant_data = history.iloc[:-2] 
-        if len(relevant_data) < length: return None, None
-        
-        swing_high = float(relevant_data['high'].rolling(window=length).max().iloc[-1])
-        swing_low = float(relevant_data['low'].rolling(window=length).min().iloc[-1])
-        return swing_high, swing_low
-
     def check_entry_signal(self, history_slice):
-        # 1. Validation & Safe Parameters
+        # 1. Validation (Safe Minimum Length)
         min_len = int(self.params.get('MIN_LOOKBACK', 50))
         if len(history_slice) < min_len: return None, None, None, None
 
         # 2. Candle Definitions
-        signal_candle = history_slice.iloc[-2]   # Confirmed Candle
-        current_candle = history_slice.iloc[-1]  # Market Open
+        signal_candle = history_slice.iloc[-2]   # Confirmed Candle (USE THIS FOR LOGIC)
+        current_candle = history_slice.iloc[-1]  # Market Open (ONLY USE ['open'])
         
         trade_type = None
         entry_price = float(current_candle['open'])
@@ -57,26 +49,48 @@ class Strategy:
         take_profit = 0.0
 
         # --- LOGIC START ---
-        # (AI LOGIC HERE - Note to AI: Always wrap self.params in int() or float())
+        # ⚠️ AI INSTRUCTION: trade_type MUST be exactly 'buy' or 'sell' (lowercase). NEVER use 'LONG'/'SHORT'.
+        
+        # Example Logic:
+        # is_cross_up = bool(signal_candle['MACD'] > signal_candle['MACD_Signal'])
+        # if is_cross_up:
+        #     trade_type = 'buy'
+        #     stop_loss = float(signal_candle['low'] - 2.0)
+        #     take_profit = float(entry_price + (entry_price - stop_loss) * 2.0)
         # --- LOGIC END ---
 
-        if trade_type:
+        # 3. Engine Safety Net & Strict SL Validation
+        if trade_type in ['buy', 'sell']:
             if stop_loss <= 0 or take_profit <= 0: return None, None, None, None
+            
+            # Anti-Crash: Prevent Invalid SL direction
+            risk_distance = abs(entry_price - stop_loss)
+            if risk_distance <= 0: return None, None, None, None
+            if trade_type == 'buy' and stop_loss >= entry_price: return None, None, None, None
+            if trade_type == 'sell' and stop_loss <= entry_price: return None, None, None, None
+
             return trade_type, entry_price, stop_loss, take_profit
 
         return None, None, None, None
 
     def check_exit_conditions(self, current_candle, history_slice, position):
+        """
+        ⚠️ AI INSTRUCTION: MUST return exactly TWO values: (exit_price, reason_string) or (None, None).
+        """
         return None, None
 
     def get_plot_addplots(self, plot_data, ap, config):
         """
-        Visual debugging for Backtest Reports.
-        Add indicators here to see them on the chart.
+        ⚠️ AI INSTRUCTION: Always check if plot_data is empty before appending!
         """
-        # if 'EMA' in plot_data.columns:
-        #     ap.append(mpf.make_addplot(plot_data['EMA'], panel=0, color='blue', width=1.0))
-        return ap, (3, 1) # Aspect Ratio (Main: 3, Indicator: 1)
+        if plot_data is None or plot_data.empty:
+            return ap, (3, 1)
+
+        # Example:
+        # if 'EMA' in plot_data.columns and not plot_data['EMA'].isna().all():
+        #     ap.append(mpf.make_addplot(plot_data['EMA'], color='blue', width=1.0))
+
+        return ap, (3, 1)
 `;
 
     const handleCopy = async () => {
@@ -91,7 +105,7 @@ class Strategy:
 
     return (
         <div className="h-full flex flex-col gap-6 font-sans">
-            {/* Header section with AI Vibes */}
+            {/* Header Section */}
             <div className="bg-[#121215] border border-white/5 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-center shrink-0 group shadow-xl">
                 <div className="absolute -top-[50%] -right-[10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none"></div>
                 <div className="relative z-10 flex items-center gap-4">
@@ -104,7 +118,7 @@ class Strategy:
                     <div>
                         <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
                             {t('ai_builder_title')}
-                            <span className="bg-indigo-500/20 text-indigo-400 text-[10px] px-2 py-0.5 rounded border border-indigo-500/30 font-mono">NO-CODE</span>
+                            <span className="bg-indigo-500/20 text-indigo-400 text-[10px] px-2 py-0.5 rounded border border-indigo-500/30 font-mono">BULLETPROOF</span>
                         </h2>
                         <p className="text-xs text-zinc-400 font-medium mt-1 max-w-2xl leading-relaxed">
                             {t('ai_builder_subtitle')}
@@ -132,12 +146,10 @@ class Strategy:
                 </div>
             </div>
 
-            {/* Code Template Box */}
+            {/* Code Template Display & Copy Action */}
             <div className="flex-1 bg-[#09090b] border border-white/10 rounded-2xl flex flex-col overflow-hidden relative shadow-2xl group">
-                {/* Subtle border glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                 
-                {/* Code Header Bar */}
                 <div className="flex items-center justify-between px-4 py-3 bg-[#121215] border-b border-white/5 shrink-0 z-10">
                     <div className="flex items-center gap-3">
                         <div className="flex gap-1.5">
@@ -145,7 +157,7 @@ class Strategy:
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
                         </div>
-                        <span className="text-xs font-mono text-zinc-500 font-bold ml-2">Base_Strategy_Template.py</span>
+                        <span className="text-xs font-mono text-zinc-500 font-bold ml-2">ZeroCrash_Template.py</span>
                     </div>
                     
                     <button 
@@ -170,28 +182,26 @@ class Strategy:
                     </button>
                 </div>
 
-                {/* Code Body */}
-                <div className="flex-1 p-4 overflow-auto custom-scroll relative z-10">
+                <div className="flex-1 p-4 overflow-auto custom-scroll relative z-10" dir="ltr">
                     <pre className="text-[11px] font-mono leading-[1.6] text-zinc-300">
                         <code>
                             {templateCode.split('\n').map((line, i) => {
-                                // Simple syntax highlighting logic for visualization
                                 let coloredLine = line;
-                                if (line.trim().startsWith('#')) {
-                                    coloredLine = <span className="text-zinc-500">{line}</span>;
-                                } else if (line.includes('"""')) {
-                                    coloredLine = <span className="text-emerald-500/70">{line}</span>;
+                                if (line.trim().startsWith('#') || line.trim().startsWith('"""') || line.trim().startsWith('\"\"\"')) {
+                                    if (line.includes('⚠️')) {
+                                        coloredLine = <span className="text-amber-400 font-bold">{line}</span>;
+                                    } else {
+                                        coloredLine = <span className="text-zinc-500">{line}</span>;
+                                    }
                                 } else {
-                                    // Highlight keywords
-                                    const keywords = ['def ', 'class ', 'return ', 'if ', 'None', 'import ', 'from '];
-                                    let htmlLine = line;
+                                    const keywords = ['def ', 'class ', 'return ', 'if ', 'None', 'import ', 'from ', 'elif ', 'else:', 'True', 'False'];
                                     keywords.forEach(kw => {
                                         if (line.includes(kw)) {
                                             const parts = line.split(kw);
                                             coloredLine = (
                                                 <span>
                                                     {parts[0]}
-                                                    <span className="text-indigo-400">{kw}</span>
+                                                    <span className="text-indigo-400 font-bold">{kw}</span>
                                                     {parts[1]}
                                                 </span>
                                             );

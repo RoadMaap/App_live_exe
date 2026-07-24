@@ -1,6 +1,6 @@
 {
     "mt5_path": "C:/Program Files/MetaTrader 5/terminal64.exe",
-    "wu_enabled": false,
+    "wu_enabled": true,
     "wu_candles": 500,
     "nf_enabled": true,
     "nf_eur": false,

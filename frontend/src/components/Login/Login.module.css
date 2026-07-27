@@ -1,0 +1,195 @@
+/* 
+ * Design System Tokens 
+ * These should ideally be global, but fallback values are provided here
+ * to match the strict design specification.
+ */
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--color-background, #040503);
+    font-family: var(--font-family-base, 'Inter', 'Segoe UI', sans-serif);
+    color: var(--color-text-primary, #948E89);
+}
+
+.panel {
+    width: 400px;
+    background-color: var(--color-surface, #352E2C);
+    border: 2px solid var(--color-border-strong, #78716B);
+    border-radius: var(--radius-sm, 4px);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    padding: var(--space-5, 24px) var(--space-5, 24px) var(--space-4, 16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.logo {
+    width: var(--space-8, 48px);
+    height: var(--space-8, 48px);
+    border: 1px solid var(--color-border, #5A544E);
+    border-radius: var(--radius-xs, 2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-4, 16px);
+}
+
+.icon {
+    width: var(--icon-lg, 24px);
+    height: var(--icon-lg, 24px);
+    color: var(--color-text-primary, #948E89);
+}
+
+.title {
+    font-size: var(--font-size-3xl, 24px);
+    font-weight: 700;
+    margin: 0 0 var(--space-1, 4px) 0;
+}
+
+.subtitle {
+    font-size: var(--font-size-xs, 12px);
+    color: var(--color-text-disabled, rgba(148,142,137,0.55));
+    margin: 0;
+}
+
+.body {
+    padding: 0 var(--space-5, 24px) var(--space-5, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4, 16px);
+}
+
+.labelRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-1, 4px);
+}
+
+.label {
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status {
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+}
+
+/* Maintain monochrome appearance for errors/success as per spec */
+.statusVisible {
+    opacity: 1;
+}
+
+.statusHidden {
+    opacity: 0;
+}
+
+.inputGroup {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--color-border, #5A544E);
+    border-radius: var(--radius-xs, 2px);
+    background-color: var(--color-background, #040503);
+}
+
+.inputGroup:focus-within {
+    border-color: var(--color-border-strong, #78716B);
+}
+
+.inputIcon {
+    padding-left: var(--space-3, 12px);
+    color: var(--color-text-disabled, rgba(148,142,137,0.55));
+    display: flex;
+}
+
+.input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary, #948E89);
+    font-family: monospace;
+    font-size: var(--font-size-sm, 13px);
+    padding: var(--space-3, 12px);
+    outline: none;
+}
+
+.copyButton {
+    background: transparent;
+    border: none;
+    color: var(--color-text-disabled, rgba(148,142,137,0.55));
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: none; /* Strict rule: No transition */
+}
+
+.copyButton:hover {
+    color: var(--color-text-primary, #948E89);
+    background-color: var(--color-surface-hover, rgba(120,113,107,0.08));
+}
+
+.actionButton {
+    width: 100%;
+    background-color: var(--color-text-primary, #948E89);
+    color: var(--color-background, #040503);
+    border: none;
+    border-radius: var(--radius-xs, 2px);
+    padding: var(--space-3, 12px);
+    font-size: var(--font-size-md, 14px);
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2, 8px);
+    transition: none; /* Strict rule: Immediate color change only */
+}
+
+.actionButton:hover:not(:disabled) {
+    background-color: var(--color-border-strong, #78716B);
+}
+
+.actionButton:active:not(:disabled) {
+    background-color: var(--color-border, #5A544E);
+}
+
+.actionButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.spinner {
+    width: var(--icon-sm, 16px);
+    height: var(--icon-sm, 16px);
+    border: 2px solid var(--color-background, #040503);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.footer {
+    padding: var(--space-3, 12px) var(--space-5, 24px);
+    border-top: 1px solid var(--color-divider, rgba(120,113,107,0.20));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-xs, 12px);
+    font-family: monospace;
+    color: var(--color-text-disabled, rgba(148,142,137,0.55));
+}

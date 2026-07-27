@@ -2,22 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --- تنظیمات کلی و انیمیشن پس‌زمینه --- */
-body {
-    background-size: 400% 400%;
-    animation: gradientBG 20s ease infinite;
-    background-color: #09090b; 
-    color: #e4e4e7;
-    font-family: 'Vazirmatn', sans-serif;
+/* ==================================================
+   DESIGN SYSTEM TOKENS
+   ================================================== */
+:root {
+  /* Colors */
+  --color-background: #040503;
+  --color-surface: #352E2C;
+  --color-surface-hover: rgba(120, 113, 107, 0.08);
+  --color-border: #5A544E;
+  --color-border-strong: #78716B;
+  --color-divider: rgba(120, 113, 107, 0.20);
+  
+  /* Text Colors */
+  --color-text-primary: #948E89;
+  --color-text-disabled: rgba(148, 142, 137, 0.55);
+
+  /* Typography */
+  --font-family-base: 'Inter', 'Segoe UI', 'IBM Plex Sans', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-3xl: 24px;
+
+  /* Spacing (8px Grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  /* Radius (Strictly small) */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+
+  /* Icon Sizes */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
 }
 
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+/* ==================================================
+   BASE RESETS & LAYOUT
+   ================================================== */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* حذف فلش‌های اینپوت نامبر */
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* جلوگیری از اسکرول اضافی روی بادی */
+}
+
+/* ==================================================
+   FORM CONTROLS RESETS
+   ================================================== */
+/* حذف فلش‌های اینپوت نامبر (حفظ شده از کدهای قبلی) */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -27,81 +82,28 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
-/* --- استایل‌های Login Page --- */
-.bg-grid {
-    background-size: 40px 40px;
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
-    -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+/* ==================================================
+   INDUSTRIAL SCROLLBAR
+   ================================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.glass-card {
-    background: rgba(24, 24, 27, 0.6);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 20px 40px -10px rgba(0,0,0,0.5);
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+  border-left: 1px solid var(--color-divider);
 }
 
-.input-field {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all 0.2s ease;
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-xs);
 }
 
-.input-field:focus-within {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: #10b981;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
 }
 
-/* --- استایل‌های Dashboard (Index) --- */
-.panel-base {
-    background-color: #121215;
-    border: 1px solid rgba(255,255,255,0.06);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+::-webkit-scrollbar-corner {
+  background: var(--color-background);
 }
-
-.input-dark {
-    background-color: #09090b;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #d4d4d8;
-    transition: border-color 0.2s;
-}
-
-.input-dark:focus {
-    border-color: #10b981;
-    outline: none;
-}
-
-/* اسکرول‌بار سفارشی */
-.logs-scroll::-webkit-scrollbar, ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-.logs-scroll::-webkit-scrollbar-track, ::-webkit-scrollbar-track {
-    background: #09090b;
-}
-.logs-scroll::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb {
-    background: #27272a;
-    border-radius: 99px;
-    border: 1px solid #09090b;
-}
-.logs-scroll::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:hover {
-    background: #4f46e5;
-}
-
-/* انیمیشن نمودار */
-.sparkline path {
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: dash 3s linear infinite;
-}
-@keyframes dash { 
-    0% { stroke-dashoffset: 100; }
-    50% { stroke-dashoffset: 0; }
-    100% { stroke-dashoffset: -100; }
-}
-.stroke-up { stroke: #10b981; }
-.stroke-down { stroke: #f43f5e; }

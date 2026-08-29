@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- تنظیمات کلی و انیمیشن پس‌زمینه --- */
+body {
+    background-size: 400% 400%;
+    animation: gradientBG 20s ease infinite;
+    background-color: #09090b; 
+    color: #e4e4e7;
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* حذف فلش‌های اینپوت نامبر */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* --- استایل‌های Login Page --- */
+.bg-grid {
+    background-size: 40px 40px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+
+.glass-card {
+    background: rgba(24, 24, 27, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 20px 40px -10px rgba(0,0,0,0.5);
+}
+
+.input-field {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+}
+
+.input-field:focus-within {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+/* --- استایل‌های Dashboard (Index) --- */
+.panel-base {
+    background-color: #121215;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.input-dark {
+    background-color: #09090b;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #d4d4d8;
+    transition: border-color 0.2s;
+}
+
+.input-dark:focus {
+    border-color: #10b981;
+    outline: none;
+}
+
+/* اسکرول‌بار سفارشی */
+.logs-scroll::-webkit-scrollbar, ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.logs-scroll::-webkit-scrollbar-track, ::-webkit-scrollbar-track {
+    background: #09090b;
+}
+.logs-scroll::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 99px;
+    border: 1px solid #09090b;
+}
+.logs-scroll::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:hover {
+    background: #4f46e5;
+}
+
+/* انیمیشن نمودار */
+.sparkline path {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: dash 3s linear infinite;
+}
+@keyframes dash { 
+    0% { stroke-dashoffset: 100; }
+    50% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -100; }
+}
+.stroke-up { stroke: #10b981; }
+.stroke-down { stroke: #f43f5e; }

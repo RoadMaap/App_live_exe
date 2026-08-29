@@ -1,0 +1,85 @@
+import os
+import sys
+import threading
+import time
+import eel
+
+# ==============================================================================
+# 1. SYSTEM PATH INJECTION
+# ==============================================================================
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
+# ==============================================================================
+# 2. IMPORT ROUTES & SERVICES (Enterprise Architecture)
+# ==============================================================================
+import api.routes 
+from services.news_daemon import start_news_ticker_service
+from storage.json_manager import load_saved_strategies_disk
+from core.error_handler import ui_log
+
+# ==============================================================================
+# 3. GRACEFUL SHUTDOWN HANDLER
+# ==============================================================================
+def on_close(page, sockets):
+    """
+    هندلر هوشمند خروج: 
+    جلوگیری از خاموش شدن ناگهانی ربات هنگام رفرش کردن صفحه (F5) در مرورگر.
+    """
+    def _shutdown_if_no_sockets():
+        time.sleep(2.0)
+        
+        if len(eel._websockets) == 0:
+            import core.trading_engine as engine_controller
+            ui_log('error', "⚠️ UI Window closed permanently. Initiating Graceful Shutdown...")
+            
+            engine_controller.stop_robot()
+            time.sleep(1.5)
+            
+            try:
+                import MetaTrader5 as mt5
+                mt5.shutdown()
+                print("🔌 MT5 Connection Safely Disconnected.")
+            except Exception:
+                pass
+                
+            print("❌ Terminating process...")
+            os._exit(0)
+        else:
+            print("🔄 UI Page Refreshed. Connection Maintained. Engine is safe.")
+
+    threading.Thread(target=_shutdown_if_no_sockets, daemon=True).start()
+
+# ==============================================================================
+# 4. APP LAUNCHER
+# ==============================================================================
+if __name__ == '__main__':
+    # آدرس‌دهی پوشه بیلد شده‌ی ریکت (React)
+    FRONTEND_DIR = os.path.join(os.path.dirname(BACKEND_DIR), 'frontend', 'dist')
+    eel.init(FRONTEND_DIR) 
+    
+    load_saved_strategies_disk()
+    
+    MY_PORT = 8989
+    START_PAGE = 'index.html' 
+    APP_URL = f'http://localhost:{MY_PORT}/{START_PAGE}'
+    
+    print(f"🚀 Starting RoadMap Enterprise Terminal at {APP_URL}")
+    
+    try:
+        start_news_ticker_service()
+    except Exception as e:
+        print(f"⚠️ Could not start News Service: {e}")
+
+    app_flags = ['--window-size=1200,850', '--disable-infobars', '--disable-extensions']
+    
+    try:
+        # اجرای اولیه در حالت Edge/Chrome App Mode
+        eel.start(START_PAGE, mode='edge', port=MY_PORT, size=(1200, 850), close_callback=on_close, cmdline_args=app_flags)
+    except Exception as e:
+        print(f"⚠️ Primary App Mode Failed: {e}. Attempting Fallback to default browser...")
+        try:
+            eel.start(START_PAGE, mode='edge', size=(1200, 850), close_callback=on_close)
+        except Exception as ex:
+            print(f"❌ Fatal Error: Could not launch UI. {ex}")

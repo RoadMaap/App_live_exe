@@ -1,0 +1,3 @@
+# Ignore local user strategy and settings data
+user_settings.json
+active_strategies.json

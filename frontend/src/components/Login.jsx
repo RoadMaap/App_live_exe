@@ -74,9 +74,7 @@ const Login = ({ onLoginSuccess }) => {
                         className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] mb-6 relative group cursor-pointer"
                         title="Double-Click to bypass (Dev Mode)"
                     >
-                        <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
+                        <img src="/logo.svg" alt="RoadMaps Logo" className="w-full h-full object-contain p-3 drop-shadow-md" />
                         <div className="absolute inset-0 rounded-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-500"></div>
                     </div>
 

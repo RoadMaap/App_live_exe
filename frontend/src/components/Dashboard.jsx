@@ -182,7 +182,7 @@ const Dashboard = () => {
                                 {activeTab === 'dashboard' ? t('RoadMaps App') : activeTab === 'education' ? t('ai_builder_title') : activeTab === 'analyze' ? t('chart_analysis') || 'Chart Analysis' : t('strategy_management')}
                             </h2>
                             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                                {activeTab === 'dashboard' ? t('real_time_monitoring') : activeTab === 'education' ? t('ai_builder_subtitle') : activeTab === 'analyze' ? 'Upload chart screenshots for AI technical analysis' : t('strategy_config_subtitle')}
+                                {activeTab === 'dashboard' ? t('real_time_monitoring') : activeTab === 'education' ? t('ai_builder_subtitle') : activeTab === 'analyze' ? t('upload_chart_screenshots') : t('strategy_config_subtitle')}
                             </p>
                         </div>
 

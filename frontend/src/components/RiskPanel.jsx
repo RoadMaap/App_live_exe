@@ -115,7 +115,7 @@ const RiskPanel = ({ initialData, nextNews }) => {
                         </div>
                         <div>
                             <h3 className="text-sm font-bold text-white tracking-tight">{t('system_broker_settings') || 'System & Broker Settings'}</h3>
-                            <p className="text-[10px] text-zinc-500 font-medium">Core system & logic rules</p>
+                            <p className="text-[10px] text-zinc-500 font-medium">{t('core_system_logic')}</p>
                         </div>
                     </div>
 

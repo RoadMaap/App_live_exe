@@ -34,14 +34,24 @@ def sanitize_days_list(raw_val):
 
 def validate_number(val, cast_type, field_name):
     """
-    نگهبان امنیتی: چک می‌کند که فیلد تنظیمات خالی نباشد و یک عدد معتبر باشد.
+    Security Guard: Ensures the configuration field is neither empty nor invalid.
     """
     if str(val).strip() == '':
-        raise ValueError(f"خطای تنظیمات: شما در بخش '{field_name}' عددی وارد نکرده‌اید! لطفاً کادر مربوطه را پر کنید.")
+        raise ValueError(f"Configuration Error: The field '{field_name}' is empty! Please provide a valid number.")
     try:
         return cast_type(val)
     except ValueError:
-        raise ValueError(f"خطای تنظیمات: مقدار وارد شده برای '{field_name}' معتبر نیست. لطفاً فقط عدد وارد کنید.")
+        raise ValueError(f"Configuration Error: The value entered for '{field_name}' is invalid. Please enter numerical values only.")
+
+def validate_string(val, field_name):
+    """
+    Security Guard: Ensures required text fields (like Symbol) are not empty.
+    """
+    clean_val = str(val).strip()
+    if not clean_val:
+        raise ValueError(f"Configuration Error: The text field '{field_name}' cannot be empty!")
+    return clean_val
+
 
 # --- 3. MAIN MARKET LOOP ---
 def run_trading_engine():
@@ -50,32 +60,32 @@ def run_trading_engine():
     user_settings = jm.load_settings()
     mt5_path = user_settings.get("mt5_path")
     
-    # --- 🛡️ لایه اعتبارسنجی تنظیمات کلان (Global Settings) ---
+    # --- 🛡️ Global Settings Validation Layer ---
     try:
         global_be_enabled = user_settings.get('be_enabled', False)
-        global_be_trigger = validate_number(user_settings.get('be_trigger', 1.0), float, 'شروع ریسک‌فری (Breakeven Trigger)')
+        global_be_trigger = validate_number(user_settings.get('be_trigger', 1.0), float, 'Breakeven Trigger')
         
         global_pc_enabled = user_settings.get('pc_enabled', False)
-        global_pc_vol = validate_number(user_settings.get('pc_volume', 50.0), float, 'حجم سیو سود (Partial Volume)')
-        global_pc_trigger = validate_number(user_settings.get('pc_trigger', 2.0), float, 'نقطه سیو سود (Partial Trigger)')
+        global_pc_vol = validate_number(user_settings.get('pc_volume', 50.0), float, 'Partial Volume (%)')
+        global_pc_trigger = validate_number(user_settings.get('pc_trigger', 2.0), float, 'Partial Trigger')
         
         global_tl_enabled = user_settings.get('tl_enabled', False)
-        global_tl_trigger = validate_number(user_settings.get('tl_trigger', 10200.0), float, 'تارگت روزانه (Target Lock)')
+        global_tl_trigger = validate_number(user_settings.get('tl_trigger', 10200.0), float, 'Daily Target Lock')
             
         global_wu_enabled = user_settings.get('wu_enabled', True)
-        global_wu_candles = validate_number(user_settings.get('wu_candles', 500), int, 'تعداد کندل گرم‌سازی (Warm-up)')
+        global_wu_candles = validate_number(user_settings.get('wu_candles', 500), int, 'Warm-up Candles')
         
         margin_enabled = user_settings.get('margin_enabled', False)
-        margin_limit = validate_number(user_settings.get('margin_limit', 50.0), float, 'حداکثر مارجین درگیر (Margin Limit)')
+        margin_limit = validate_number(user_settings.get('margin_limit', 50.0), float, 'Max Margin Limit (%)')
         
         nf_enabled = user_settings.get('nf_enabled', False)
         nf_eur = user_settings.get('nf_eur', True)
         nf_usd = user_settings.get('nf_usd', True)
-        nf_before = validate_number(user_settings.get('nf_before', 30), int, 'دقایق قبل از خبر (News Before)')
-        nf_after = validate_number(user_settings.get('nf_after', 30), int, 'دقایق بعد از خبر (News After)')
+        nf_before = validate_number(user_settings.get('nf_before', 30), int, 'News Filter (Mins Before)')
+        nf_after = validate_number(user_settings.get('nf_after', 30), int, 'News Filter (Mins After)')
 
     except ValueError as ve:
-        # اگر کادری خالی بود، ارور چاپ می‌شود و ربات خاموش می‌ماند
+        # Catch empty fields and display error safely on the UI
         ui_log('error', str(ve))
         robot_running = False
         return
@@ -87,10 +97,13 @@ def run_trading_engine():
         try:
             cls, params, cfg = data["class"], data["params"], data["config"]
             strat_mm_rules = []
-            risk_mode = cfg.get('risk_mode', 'fixed_usd')
             
-            # 🛡️ بررسی خالی نبودن عدد ریسک در استراتژی‌ها
-            risk_val = validate_number(cfg.get('risk_value', 100.0), float, f"مقدار ریسک در استراتژی {name}")
+            # 🛡️ Validating crucial strategy fields
+            symbol = validate_string(cfg.get("symbol", ""), f"Symbol in strategy '{name}'")
+            magic_number = validate_number(cfg.get("magic_number", 0), int, f"Magic Number in strategy '{name}'")
+            
+            risk_mode = cfg.get('risk_mode', 'fixed_usd')
+            risk_val = validate_number(cfg.get('risk_value', 100.0), float, f"Risk Value in strategy '{name}'")
             
             if risk_mode == 'fixed_usd': strat_mm_rules.append(FixedRiskAmountRule(risk_val))
             elif risk_mode == 'fixed_lot': strat_mm_rules.append(FixedLotRule(risk_val))
@@ -119,18 +132,18 @@ def run_trading_engine():
             final_lookback = global_wu_candles if global_wu_enabled else cfg.get("lookback", 500)
             
             sym_config = create_symbol_config(
-                symbol=cfg["symbol"], strategy_instance=strat_instance, mm_rules=strat_mm_rules,
-                timeframe_mt5=selected_tf, magic_number=cfg["magic_number"], lookback=final_lookback,
-                point_value=cfg["point_value"], adjustment_pips=cfg["adjustment_pips"],
-                candle_type=cfg["candle_type"], contract_size=cfg["contract_size"],
+                symbol=symbol, strategy_instance=strat_instance, mm_rules=strat_mm_rules,
+                timeframe_mt5=selected_tf, magic_number=magic_number, lookback=final_lookback,
+                point_value=cfg.get("point_value", 1.0), adjustment_pips=cfg.get("adjustment_pips", 0),
+                candle_type=cfg.get("candle_type", "STANDARD"), contract_size=cfg.get("contract_size", None),
                 allowed_days=clean_days, killzones=cfg.get("killzones", []), custom_seconds=cfg.get("TIMEFRAME_SECONDS", 300)
             )
             sym_config['leverage'] = cfg.get('leverage', '')
             strategy_instances_config.append(sym_config)
             
         except ValueError as ve:
-            # گیر انداختن ارور خالی بودن فیلد ریسک
-            if "خطای تنظیمات:" in str(ve):
+            # Trap empty risk/symbol fields gracefully
+            if "Configuration Error:" in str(ve):
                 ui_log('error', str(ve))
                 robot_running = False
                 return

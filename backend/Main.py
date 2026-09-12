@@ -18,6 +18,7 @@ import api.routes
 from services.news_daemon import start_news_ticker_service
 from storage.json_manager import load_saved_strategies_disk
 from core.error_handler import ui_log
+from security.auth import start_web_auth_flow
 
 # ==============================================================================
 # 3. GRACEFUL SHUTDOWN HANDLER
@@ -71,6 +72,18 @@ if __name__ == '__main__':
         start_news_ticker_service()
     except Exception as e:
         print(f"⚠️ Could not start News Service: {e}")
+
+    # If the app was started with --auth flag, run the desktop web auth flow first
+    if '--auth' in sys.argv or '--login' in sys.argv:
+        print("🔐 Running desktop web auth flow...")
+        ok, msg, token = start_web_auth_flow()
+        print(f"Auth result: success={ok}, msg={msg}")
+        if token:
+            # store token in environment for downstream modules (volatile) and print
+            os.environ['ROADMAPS_AUTH_TOKEN'] = token
+            print("✅ Received auth token and stored in environment variable ROADMAPS_AUTH_TOKEN")
+        else:
+            print("⚠️ No token received from auth flow.")
 
     app_flags = ['--window-size=1200,850', '--disable-infobars', '--disable-extensions']
     

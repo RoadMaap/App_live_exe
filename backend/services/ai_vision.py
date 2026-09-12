@@ -203,7 +203,7 @@ class GeminiVisionClient:
         print("⚙️ [Gemini Client] Optimizing image payload...")
         optimized_b64 = ImageProcessor.process_and_encode(raw_base64_image)
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
         
         dynamic_prompt = GEMINI_SYSTEM_PROMPT
         if lang == "fa":

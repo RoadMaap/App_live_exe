@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -71,11 +70,11 @@ const Login = ({ onLoginSuccess }) => {
                     {/* لوگو (با قابلیت ورود سریع با ۲ بار کلیک) */}
                     <div 
                         onDoubleClick={handleDevBypass}
-                        className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] mb-6 relative group cursor-pointer"
+                        className="w-20 h-20 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.3)] mb-6 relative group cursor-pointer"
                         title="Double-Click to bypass (Dev Mode)"
                     >
-                        <img src="/logo.svg" alt="RoadMaps Logo" className="w-full h-full object-contain p-3 drop-shadow-md" />
-                        <div className="absolute inset-0 rounded-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-500"></div>
+                        <img src="/logo.svg" alt="RoadMaps Logo" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 rounded-2xl border-2 border-white/10 group-hover:scale-105 transition-transform duration-500"></div>
                     </div>
 
                     {/* پیام خوش‌آمدگویی */}

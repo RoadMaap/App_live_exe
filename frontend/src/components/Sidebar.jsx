@@ -73,9 +73,9 @@ const Sidebar = ({ status, activeTab, onTabChange }) => {
                 
                 {/* Branding & Logo Section */}
                 <div className="flex items-center gap-4 mb-10 group cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
-                    <div className="group relative w-12 h-12 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_8px_16px_rgba(16,185,129,0.2)] transition-all duration-500 group-hover:shadow-[0_8px_24px_rgba(16,185,129,0.4)] group-hover:rotate-3">
-                        <div className="absolute inset-0 rounded-2xl border-2 border-white/20 transition-transform duration-500 group-hover:scale-105"></div>
-                        <img src="/logo.svg" alt="RoadMaps Logo" className="relative z-10 block h-full w-full object-contain p-0 drop-shadow-md" />
+                    <div className="group relative w-12 h-12 overflow-hidden rounded-2xl flex items-center justify-center shadow-[0_8px_16px_rgba(16,185,129,0.2)] transition-all duration-500 group-hover:shadow-[0_8px_24px_rgba(16,185,129,0.4)] group-hover:rotate-3">
+                        <div className="absolute inset-0 rounded-2xl border-2 border-white/10 transition-transform duration-500 group-hover:scale-105"></div>
+                        <img src="/logo.svg" alt="RoadMaps Logo" className="relative z-10 block h-full w-full object-cover" />
                         {status === "Running" && (
                             <span className={`absolute -top-1.5 ${isRtl ? '-left-1.5' : '-right-1.5'} w-3.5 h-3.5 bg-white rounded-full animate-ping opacity-80`}></span>
                         )}

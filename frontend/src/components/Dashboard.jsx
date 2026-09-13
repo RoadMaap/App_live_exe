@@ -21,6 +21,7 @@ const Dashboard = () => {
     const [logs, setLogs] = useState([]);
     const [activeTab, setActiveTab] = useState('dashboard');
     const [strategies, setStrategies] = useState({});
+    const [userName, setUserName] = useState('');
     
     // News Ticker State
     const [nextNews, setNextNews] = useState(null);
@@ -49,6 +50,10 @@ const Dashboard = () => {
                             setStrategies(data.strategies);
                         }
                     }
+
+                    const authStatus = await window.eel.get_auth_status()();
+                    const authenticatedUserName = authStatus?.profile?.username;
+                    if (authenticatedUserName) setUserName(authenticatedUserName);
                 } catch (error) {
                     console.error("Error fetching initial data from Eel:", error);
                 }
@@ -179,7 +184,7 @@ const Dashboard = () => {
                     <header className={`h-20 shrink-0 border-b border-zinc-200 dark:border-white/5 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md flex items-center justify-between px-8 z-20 sticky top-0 ${transitionClass}`}>
                         <div>
                             <h2 className="text-xl font-bold text-zinc-800 dark:text-white tracking-tight flex items-center gap-3">
-                                {activeTab === 'dashboard' ? t('RoadMaps App') : activeTab === 'education' ? t('ai_builder_title') : activeTab === 'analyze' ? t('chart_analysis') || 'Chart Analysis' : t('strategy_management')}
+                                {activeTab === 'dashboard' ? (userName || t('RoadMaps App')) : activeTab === 'education' ? t('ai_builder_title') : activeTab === 'analyze' ? t('chart_analysis') || 'Chart Analysis' : t('strategy_management')}
                             </h2>
                             <p className="text-xs text-zinc-500 font-medium mt-0.5">
                                 {activeTab === 'dashboard' ? t('real_time_monitoring') : activeTab === 'education' ? t('ai_builder_subtitle') : activeTab === 'analyze' ? t('upload_chart_screenshots') : t('strategy_config_subtitle')}

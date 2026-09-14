@@ -19,12 +19,39 @@ class SystemShield:
 
     @staticmethod
     def _get_machine_id():
-        """تولید یک کلید یکتا بر اساس سخت‌افزار کامپیوتر (جلوگیری از کارکرد فایل JSON روی سیستم دیگر)"""
+        """Create a stable machine fingerprint without relying on deprecated WMIC commands."""
         try:
             if platform.system() == "Windows":
-                output = subprocess.check_output("wmic csproduct get uuid", shell=True).decode()
-                return output.split('\n')[1].strip()
-            elif platform.system() == "Darwin": # macOS
+                candidate_commands = [
+                    ["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_ComputerSystemProduct).UUID"],
+                    ["powershell", "-NoProfile", "-Command", "(Get-WmiObject Win32_ComputerSystemProduct).UUID"],
+                    ["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_BIOS).SerialNumber"],
+                    ["cmd", "/c", "wmic csproduct get uuid"],
+                ]
+
+                for command in candidate_commands:
+                    try:
+                        output = subprocess.check_output(command, stderr=subprocess.DEVNULL)
+                        text = output.decode("utf-8", errors="ignore")
+                        lines = [line.strip() for line in text.splitlines() if line.strip()]
+                        for line in lines:
+                            if line.lower().startswith("uuid") or line.lower().startswith("serialnumber"):
+                                continue
+                            if len(line) >= 8 and not line.startswith("===="):
+                                return line
+                    except Exception:
+                        continue
+
+                try:
+                    import winreg
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography") as key:
+                        value, _ = winreg.QueryValueEx(key, "MachineGuid")
+                        if value:
+                            return value
+                except Exception:
+                    pass
+
+            elif platform.system() == "Darwin":
                 output = subprocess.check_output("ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID", shell=True).decode()
                 return output.split('"')[3]
         except Exception:

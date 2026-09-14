@@ -8,19 +8,40 @@ import socketserver
 import threading
 import time
 import urllib.parse
+from pathlib import Path
 import webbrowser
 import requests
 from requests.exceptions import RequestException, JSONDecodeError
 
+
+def _load_env_file():
+    """Load local project .env values when present without requiring third-party packages."""
+    env_path = Path(__file__).resolve().parents[2] / '.env'
+    if not env_path.exists():
+        return
+
+    for line in env_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+_load_env_file()
+
 # All inline and block comments are strictly written in professional English.
 
 # Ensure no leading slash before http and keep trailing slashes intact
-BACKEND_BASE_URL = os.getenv("ROADMAPS_BACKEND_URL", "http://localhost").rstrip('/')
+BACKEND_BASE_URL = os.getenv("ROADMAPS_BACKEND_URL", "https://roadmaps.ir/").rstrip('/')
 PKCE_START_URL = f"{BACKEND_BASE_URL}/api/v1/users/auth/pkce/start/"
 PKCE_TOKEN_URL = f"{BACKEND_BASE_URL}/api/v1/users/auth/pkce/token/"
 
-LOCAL_AUTH_PORT = 0  # 0 allows OS to dynamically bind to any free port
-
+# Local loopback callback port for the desktop PKCE browser redirect flow.
+# Supports both project-specific and generic env variables for compatibility.
+LOCAL_AUTH_PORT = int(os.getenv("ROADMAPS_LOCAL_AUTH_PORT") or os.getenv("LOCAL_AUTH_PORT") or "8765")
 
 class AuthHandler(http.server.SimpleHTTPRequestHandler):
     """Captures the loopback authorization code redirected from browser."""

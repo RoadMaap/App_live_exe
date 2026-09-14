@@ -48,20 +48,22 @@ def attempt_login():
 
         if auth_result.get("success") and auth_result.get("user_data"):
             user_data = auth_result["user_data"]
-            
-            # Extract keys based on the backend Django contract
+            nested_user = user_data.get("user") if isinstance(user_data.get("user"), dict) else {}
+
+            profile = {
+                "email": user_data.get("user_email") or nested_user.get("email") or user_data.get("email"),
+                "username": user_data.get("username") or nested_user.get("username") or user_data.get("user_name"),
+                "first_name": user_data.get("first_name") or nested_user.get("first_name"),
+                "last_name": user_data.get("last_name") or nested_user.get("last_name"),
+            }
+
             ACTIVE_SESSION["access_token"] = user_data.get("access")
             ACTIVE_SESSION["refresh_token"] = user_data.get("refresh")
             ACTIVE_SESSION["user_authenticated"] = True
-            ACTIVE_SESSION["profile"] = {
-                "email": user_data.get("user_email"),
-                "username": user_data.get("username"),
-                "first_name": user_data.get("first_name"),
-                "last_name": user_data.get("last_name")
-            }
-            
+            ACTIVE_SESSION["profile"] = profile
+
             print(f"✅ Web Auth Success! User: {ACTIVE_SESSION['profile']['username']}")
-            
+
             return {
                 "success": True,
                 "message": auth_result.get("message", "Authentication successful."),

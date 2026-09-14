@@ -18,33 +18,45 @@ import api.routes
 from services.news_daemon import start_news_ticker_service
 from storage.json_manager import load_saved_strategies_disk
 from core.error_handler import ui_log
-from security.auth import start_web_auth_flow
+from security.desktop_auth import start_web_auth_flow
 
 # ==============================================================================
 # 3. GRACEFUL SHUTDOWN HANDLER
 # ==============================================================================
+_shutdown_initiated = False
+
+
 def on_close(page, sockets):
     """
-    هندلر هوشمند خروج: 
-    جلوگیری از خاموش شدن ناگهانی ربات هنگام رفرش کردن صفحه (F5) در مرورگر.
+    Stable shutdown logic: prevents duplicate close events and exits the process cleanly.
     """
+    global _shutdown_initiated
+    if _shutdown_initiated:
+        return
+    _shutdown_initiated = True
+
     def _shutdown_if_no_sockets():
         time.sleep(2.0)
-        
-        if len(eel._websockets) == 0:
-            import core.trading_engine as engine_controller
+
+        if len(getattr(eel, '_websockets', [])) == 0:
             ui_log('error', "⚠️ UI Window closed permanently. Initiating Graceful Shutdown...")
-            
-            engine_controller.stop_robot()
-            time.sleep(1.5)
-            
+            try:
+                import core.engine_controller as engine_controller
+                if hasattr(engine_controller, 'stop_robot'):
+                    engine_controller.stop_robot()
+                    print("🛑 Engine stop command sent to controller.")
+            except Exception as exc:
+                print(f"⚠️ Shutdown engine stop warning: {exc}")
+
+            time.sleep(1.0)
+
             try:
                 import MetaTrader5 as mt5
                 mt5.shutdown()
                 print("🔌 MT5 Connection Safely Disconnected.")
             except Exception:
                 pass
-                
+
             print("❌ Terminating process...")
             os._exit(0)
         else:

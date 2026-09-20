@@ -196,7 +196,7 @@ const ChartAnalyzer = () => {
         if (!result || isDeploying || !symbol) return;
         setIsDeploying(true);
         try {
-            const deployRes = await window.eel.deploy_ai_trade_to_mt5(symbol.toUpperCase(), result, riskMode, parseFloat(riskValue))();
+            const deployRes = await window.eel.deploy_ai_trade_to_mt5(symbol, result, riskMode, parseFloat(riskValue))();
             
             if (deployRes && deployRes.success) {
                 showToast(deployRes.message, 'success');
@@ -480,9 +480,9 @@ const ChartAnalyzer = () => {
                                             <input 
                                                 type="text" 
                                                 value={symbol} 
-                                                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                                onChange={(e) => setSymbol(e.target.value)}
                                                 dir="ltr"
-                                                className="w-full h-full bg-transparent border-none outline-none text-white font-mono font-bold text-base placeholder-zinc-700 uppercase tracking-widest"
+                                                className="w-full h-full bg-transparent border-none outline-none text-white font-mono font-bold text-base placeholder-zinc-700 tracking-widest"
                                                 placeholder="XAUUSD"
                                             />
                                         </div>

@@ -11,6 +11,7 @@ if BACKEND_DIR not in sys.path:
 # --- 2. ENTERPRISE ARCHITECTURE IMPORTS ---
 import core.engine_controller as engine_controller
 import storage.json_manager as jm
+from updater.app_updater import AppUpdater, APP_VERSION
 
 # 🛡️ Integrating the System Shield security module
 from security.system_shield import SystemShield
@@ -84,6 +85,33 @@ def attempt_login():
 def get_auth_status():
     """Checks if the desktop client currently holds an active authenticated session."""
     return ACTIVE_SESSION
+
+
+@eel.expose
+def get_app_version():
+    """Returns the local desktop application version."""
+    return {
+        'version': AppUpdater.get_current_version() or APP_VERSION,
+        'release_api': os.environ.get('ROADMAPS_APP_RELEASE_API_URL', 'https://roadmaps.ir/api/v1/roadmapsapp/releases/latest/')
+    }
+
+
+@eel.expose
+def set_test_current_version(version):
+    """Dev/test helper: force a lower local version so the updater can be validated."""
+    return AppUpdater.set_test_current_version(version)
+
+
+@eel.expose
+def check_for_app_update():
+    """Queries the release API and reports whether a newer app version exists."""
+    return AppUpdater.check_for_update()
+
+
+@eel.expose
+def download_and_install_update():
+    """Downloads, validates, and installs the latest release artifact."""
+    return AppUpdater.download_and_install_update()
 
 
 # --- 4. CONFIG & STATE ENDPOINTS ---

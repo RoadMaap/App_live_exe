@@ -44,6 +44,14 @@ def _is_newer_version(current, latest):
     return _parse_version(latest) > _parse_version(current)
 
 
+def _as_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {'1', 'true', 'yes', 'y', 'on', 'required', 'forced'}
+    return bool(value)
+
+
 class AppUpdater:
     @staticmethod
     def get_current_version():
@@ -114,11 +122,18 @@ class AppUpdater:
             }
 
         latest_version = payload.get('version', current_version)
+        is_force_update = _as_bool(
+            payload.get(
+                'is_force_update',
+                payload.get('force_update', payload.get('required', False)),
+            )
+        )
         return {
             'has_update': _is_newer_version(current_version, latest_version),
             'current_version': current_version,
             'latest_version': latest_version,
-            'is_force_update': bool(payload.get('is_force_update', False)),
+            'is_force_update': is_force_update,
+            'update_type': 'forced' if is_force_update else 'optional',
             'download_url': payload.get('download_url', ''),
             'changelog': payload.get('changelog', ''),
             'sha256': payload.get('sha256', ''),
@@ -147,6 +162,8 @@ class AppUpdater:
                 'success': False,
                 'message': 'No update available.',
                 'has_update': False,
+                'is_force_update': False,
+                'update_type': 'optional',
             }
 
         download_url = status.get('download_url')
@@ -155,7 +172,13 @@ class AppUpdater:
         current_version = status.get('current_version')
 
         if not download_url:
-            return {'success': False, 'message': 'No download URL for the latest release.', 'has_update': True}
+            return {
+                'success': False,
+                'message': 'No download URL for the latest release.',
+                'has_update': True,
+                'is_force_update': status.get('is_force_update', False),
+                'update_type': status.get('update_type', 'optional'),
+            }
 
         APP_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         RELEASES_DIR.mkdir(parents=True, exist_ok=True)
@@ -178,6 +201,8 @@ class AppUpdater:
                     'success': False,
                     'message': 'Checksum mismatch. Update cancelled.',
                     'has_update': True,
+                    'is_force_update': status.get('is_force_update', False),
+                    'update_type': status.get('update_type', 'optional'),
                     'expected_sha256': expected_hash,
                     'actual_sha256': actual_hash,
                 }
@@ -202,13 +227,21 @@ class AppUpdater:
                 'success': True,
                 'message': f'Update to version {latest_version} installed successfully.',
                 'has_update': True,
+                'is_force_update': status.get('is_force_update', False),
+                'update_type': status.get('update_type', 'optional'),
                 'version': latest_version,
                 'install_path': str(target_version_path),
             }
         except Exception as exc:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-            return {'success': False, 'message': str(exc), 'has_update': True}
+            return {
+                'success': False,
+                'message': str(exc),
+                'has_update': True,
+                'is_force_update': status.get('is_force_update', False),
+                'update_type': status.get('update_type', 'optional'),
+            }
 
     @staticmethod
     def rollback_last_update():

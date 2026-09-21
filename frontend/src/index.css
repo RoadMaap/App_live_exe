@@ -5,6 +5,8 @@
 :root {
   color-scheme: dark;
   font-family: 'Inter', 'Segoe UI', sans-serif;
+  --font-latin: 'Inter', 'Segoe UI', sans-serif;
+  --font-persian: 'B Nazanin', 'Tahoma', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -106,7 +108,32 @@ body {
 }
 
 body, button, input, select, textarea {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-family: var(--font-latin);
+}
+
+/* Use a Persian-optimized face only when the active interface is RTL. */
+[dir='rtl'],
+[dir='rtl'] body,
+[dir='rtl'] button,
+[dir='rtl'] input,
+[dir='rtl'] select,
+[dir='rtl'] textarea {
+  font-family: var(--font-persian);
+  font-weight: 400;
+}
+
+[dir='rtl'] .font-semibold {
+  font-weight: 500;
+}
+
+[dir='rtl'] .font-bold {
+  font-weight: 600;
+}
+
+[dir='rtl'] .font-mono,
+[dir='rtl'] code,
+[dir='rtl'] pre {
+  font-family: 'Cascadia Mono', 'Consolas', monospace;
 }
 
 button, input, select, textarea {
@@ -178,6 +205,135 @@ input[type='number'] {
 
 .app-muted {
   color: var(--text-muted);
+}
+
+.update-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(6px);
+}
+
+.update-modal {
+  width: min(540px, 100%);
+  padding: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.update-modal-badge {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in srgb, var(--info) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--info) 14%, transparent);
+  color: var(--info);
+  font-weight: 800;
+}
+
+.update-modal-badge-force {
+  border-color: color-mix(in srgb, var(--danger) 48%, transparent);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.update-modal-title {
+  margin-bottom: 10px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.update-modal-description {
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.update-modal-versions {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+  color: var(--info);
+  font-size: 13px;
+}
+
+.update-modal-versions strong {
+  color: var(--text-primary);
+}
+
+.update-modal-changelog {
+  min-height: 90px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-control);
+  border-radius: 4px;
+  background: var(--bg-control);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.update-modal-error {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 48%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.update-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.update-modal-button {
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.update-modal-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.update-modal-button-primary {
+  border-color: var(--tone-cyan);
+  background: var(--tone-cyan);
+  color: var(--text-on-accent);
+}
+
+.update-modal-button-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.update-modal-button-secondary {
+  border-color: var(--border-control);
+  background: var(--bg-control);
+  color: var(--text-primary);
+}
+
+.update-modal-button-secondary:hover:not(:disabled) {
+  background: var(--bg-control-hover);
 }
 
 .info-tooltip-content {

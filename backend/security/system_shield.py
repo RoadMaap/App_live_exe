@@ -5,7 +5,13 @@ import base64
 import hashlib
 import platform
 import subprocess
+import threading
+import uuid
+from pathlib import Path
 from functools import wraps
+from urllib.parse import unquote
+
+from cryptography.fernet import Fernet, InvalidToken
 
 class SystemShield:
     """
@@ -16,6 +22,7 @@ class SystemShield:
     """
 
     _call_history = {}
+    _rate_limit_lock = threading.Lock()
 
     @staticmethod
     def _get_machine_id():
@@ -56,42 +63,52 @@ class SystemShield:
                 return output.split('"')[3]
         except Exception:
             pass
-        return "UNKNOWN_NATIVE_MACHINE_12345"
+        return f"{platform.node()}::{uuid.getnode()}"
 
     @staticmethod
     def _get_cipher_key():
-        """تبدیل هش سخت‌افزار به کلید رمزنگاری"""
+        """Derive a Fernet key from the local machine identity."""
         hwid = SystemShield._get_machine_id()
-        return hashlib.sha256(hwid.encode('utf-8')).digest()
+        digest = hashlib.sha256(hwid.encode('utf-8')).digest()
+        return base64.urlsafe_b64encode(digest)
 
     @staticmethod
     def encrypt_data(text: str) -> str:
-        """رمزنگاری متن با استفاده از ترکیب Base64 و کلید سخت‌افزاری (XOR)"""
-        if not text or text.startswith("ENC::"): 
+        """Encrypt sensitive text while keeping legacy values untouched."""
+        if not text or text.startswith(("ENC::", "ENC2::")):
             return text
-            
-        key = SystemShield._get_cipher_key()
-        # XOR Encryption
-        xored = "".join(chr(ord(c) ^ key[i % len(key)]) for i, c in enumerate(text))
-        # Base64 Encoding
-        encoded = base64.b64encode(xored.encode('utf-8')).decode('utf-8')
-        return f"ENC::{encoded}"
+
+        token = Fernet(SystemShield._get_cipher_key()).encrypt(text.encode('utf-8'))
+        return f"ENC2::{token.decode('ascii')}"
 
     @staticmethod
     def decrypt_data(encrypted_text: str) -> str:
-        """رمزگشایی دیتای قفل شده با سخت‌افزار"""
-        if not encrypted_text or not encrypted_text.startswith("ENC::"):
+        """Decrypt new Fernet values and retain compatibility with legacy XOR values."""
+        if not encrypted_text or not encrypted_text.startswith(("ENC::", "ENC2::")):
             return encrypted_text
-            
+
         try:
-            clean_text = encrypted_text.replace("ENC::", "")
+            if encrypted_text.startswith("ENC2::"):
+                token = encrypted_text[len("ENC2::"):].encode('ascii')
+                return Fernet(SystemShield._get_cipher_key()).decrypt(token).decode('utf-8')
+
+            clean_text = encrypted_text[len("ENC::"):]
             decoded = base64.b64decode(clean_text.encode('utf-8')).decode('utf-8')
-            key = SystemShield._get_cipher_key()
-            
-            # XOR Decryption (XOR is symmetric)
-            return "".join(chr(ord(c) ^ key[i % len(key)]) for i, c in enumerate(decoded))
-        except Exception as e:
-            print(f"🛡️ [SECURITY ALERT] Failed to decrypt data. File might be stolen or tampered: {e}")
+            legacy_hwid_values = [
+                SystemShield._get_machine_id(),
+                "UNKNOWN_NATIVE_MACHINE_12345",
+            ]
+            for legacy_hwid in legacy_hwid_values:
+                legacy_key = hashlib.sha256(legacy_hwid.encode('utf-8')).digest()
+                candidate = "".join(
+                    chr(ord(char) ^ legacy_key[index % len(legacy_key)])
+                    for index, char in enumerate(decoded)
+                )
+                if candidate.isprintable():
+                    return candidate
+            return ""
+        except (InvalidToken, ValueError, UnicodeError, base64.binascii.Error) as error:
+            print(f"🛡️ [SECURITY ALERT] Failed to decrypt data. File might be stolen or tampered: {error}")
             return ""
 
     @staticmethod
@@ -104,33 +121,41 @@ class SystemShield:
             @wraps(func)
             def wrapper(*args, **kwargs):
                 func_name = func.__name__
-                now = time.time()
-                
-                # پاک‌سازی هیستوری قدیمی
-                history = SystemShield._call_history.get(func_name, [])
-                history = [t for t in history if now - t < period_seconds]
-                
-                if len(history) >= max_calls:
-                    print(f"🛡️ [SECURITY ALERT] Rate limit exceeded for '{func_name}'. Request blocked.")
-                    from core.error_handler import ui_log
-                    ui_log('error', "⚠️ Please slow down! Too many requests.")
-                    return {"success": False, "message": "Too many requests. Please wait."}
-                
-                history.append(now)
-                SystemShield._call_history[func_name] = history
+                now = time.monotonic()
+                with SystemShield._rate_limit_lock:
+                    history = SystemShield._call_history.get(func_name, [])
+                    history = [timestamp for timestamp in history if now - timestamp < period_seconds]
+
+                    if len(history) >= max_calls:
+                        print(f"🛡️ [SECURITY ALERT] Rate limit exceeded for '{func_name}'. Request blocked.")
+                        from core.error_handler import ui_log
+                        ui_log('error', "⚠️ Please slow down! Too many requests.")
+                        return {"success": False, "message": "Too many requests. Please wait."}
+
+                    history.append(now)
+                    SystemShield._call_history[func_name] = history
                 return func(*args, **kwargs)
             return wrapper
         return decorator
 
     @staticmethod
     def sanitize_path(file_path: str) -> bool:
-        """جلوگیری از حملات Path Traversal (مثل دسترسی به فایل‌های خارج از پوشه مجاز)"""
-        if not file_path: return False
-        
-        # کاراکترهای خطرناک
-        dangerous_patterns = ['..', '\x00', '%00']
-        if any(pat in file_path for pat in dangerous_patterns):
-            print(f"🛡️ [SECURITY ALERT] Malicious path traversal detected: {file_path}")
+        """Validate a user-selected strategy path without breaking native file selection."""
+        if not isinstance(file_path, str) or not file_path.strip():
             return False
-            
+
+        decoded_path = unquote(file_path).replace('\x00', '')
+        if '\x00' in file_path or '\x00' in decoded_path:
+            print("🛡️ [SECURITY ALERT] Null byte in strategy path.")
+            return False
+
+        try:
+            resolved_path = Path(decoded_path).expanduser().resolve(strict=True)
+        except (OSError, RuntimeError, ValueError):
+            return False
+
+        if not resolved_path.is_file() or resolved_path.suffix.lower() != '.py':
+            print(f"🛡️ [SECURITY ALERT] Invalid strategy file path: {resolved_path}")
+            return False
+
         return True

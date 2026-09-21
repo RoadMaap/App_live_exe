@@ -73,7 +73,7 @@ const EnginePanel = ({
 
     return (
         <div 
-            className="flex flex-col gap-4 font-['Segoe_UI',-apple-system,BlinkMacSystemFont,sans-serif] h-full select-none"
+            className="flex flex-col gap-4 font-['Segoe_UI',-apple-system,BlinkMacSystemFont,sans-serif] h-full min-h-0 select-none"
             dir={isRtl ? 'rtl' : 'ltr'}
         >
             {/* 1. Primary Engine Execution Controller */}
@@ -179,7 +179,7 @@ const EnginePanel = ({
             </div>
 
             {/* 3. Live Console Logs Terminal (Windows Terminal Pattern) */}
-            <div className="bg-[#18181B] border border-[#333333] rounded-[8px] flex-1 flex flex-col min-h-[300px] overflow-hidden shadow-inner">
+            <div className="bg-[#18181B] border border-[#333333] rounded-[8px] flex-1 flex flex-col min-h-[180px] max-h-[420px] overflow-hidden shadow-inner">
                 
                 {/* CommandBar Header */}
                 <div className="h-9 px-3 border-b border-[#2D2D30] bg-[#1F1F22] flex items-center justify-between shrink-0">
@@ -234,7 +234,7 @@ const EnginePanel = ({
                 {/* Output Text Viewport */}
                 <div 
                     ref={scrollViewportRef}
-                    className="flex-1 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed space-y-1.5 select-text bg-[#141416]"
+                    className="flex-1 min-h-0 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed space-y-1.5 select-text bg-[#141416]"
                 >
                     <div className="text-[#52525B] text-[10px] pb-1 border-b border-[#1F1F22]">
                         // RoadMaps Execution Daemon Console initialized.

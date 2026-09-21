@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-// -----------------------------------------------------------------------------
-// CUSTOM SELECT COMPONENT
-// -----------------------------------------------------------------------------
-const CustomSelect = ({ value, options, onChange }) => {
+/**
+ * FluentCustomSelect Component
+ * Implements Microsoft Fluent 2 ComboBox pattern for risk mode selection.
+ */
+const FluentCustomSelect = ({ value, options, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -21,84 +22,109 @@ const CustomSelect = ({ value, options, onChange }) => {
     const selectedLabel = (options || []).find(opt => opt.value === value)?.label || value;
 
     return (
-        <div className="relative w-full h-full group" ref={containerRef}>
+        <div className="relative w-full h-full" ref={containerRef}>
             <button 
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full h-full flex items-center justify-between bg-transparent rounded-xl px-4 py-2 text-sm text-zinc-300 transition-all outline-none hover:bg-white/5 focus:bg-white/5 ${isOpen ? 'text-emerald-400' : ''}`}
+                className={`w-full h-full flex items-center justify-between bg-[#18181B] border rounded-[4px] px-3 text-xs text-[#E1DFDD] font-mono transition-all outline-none cursor-pointer ${
+                    isOpen 
+                        ? 'border-[#107C41] bg-[#1F1F22]' 
+                        : 'border-[#333333] hover:border-[#3E3E3E]'
+                }`}
             >
-                <span className="truncate pr-2 font-medium" dir="ltr">{selectedLabel}</span>
-                <svg className={`w-4 h-4 text-zinc-500 transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180 text-emerald-500' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                <span className="truncate pr-2" dir="ltr">{selectedLabel}</span>
+                <svg 
+                    className={`w-3.5 h-3.5 text-[#797775] transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-[#107C41]' : ''}`} 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
             
-            {/* Z-index high to ensure dropdown floats above everything */}
-            <div className={`absolute left-0 top-full mt-2 w-full min-w-[180px] bg-[#18181b] border border-white/10 rounded-xl shadow-[0_15px_50px_-10px_rgba(0,0,0,0.8)] z-[999999] origin-top transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2'}`}>
-                <div className="max-h-48 overflow-y-auto custom-scroll py-2">
-                    {(options || []).map((opt) => (
-                        <div 
-                            key={opt.value}
-                            onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                            className={`px-4 py-3 text-xs cursor-pointer flex items-center gap-3 transition-colors ${value === opt.value ? 'bg-emerald-500/10 text-emerald-400 font-bold' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`}
-                            dir="ltr"
-                        >
-                            <div className={`w-2 h-2 rounded-full bg-emerald-500 transition-opacity ${value === opt.value ? 'opacity-100' : 'opacity-0'}`}></div>
-                            {opt.label}
-                        </div>
-                    ))}
+            {/* Flyout menu */}
+            <div className={`absolute left-0 top-full mt-1 w-full bg-[#242424] border border-[#3E3E3E] rounded-[4px] shadow-[0_8px_24px_rgba(0,0,0,0.5)] z-50 transition-all duration-150 origin-top ${
+                isOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+            }`}>
+                <div className="max-h-48 overflow-y-auto py-1">
+                    {(options || []).map((opt) => {
+                        const isSelected = value === opt.value;
+                        return (
+                            <div 
+                                key={opt.value}
+                                onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                                className={`px-3 py-2 text-xs font-mono cursor-pointer flex items-center justify-between transition-colors ${
+                                    isSelected 
+                                        ? 'bg-[#107C41]/15 text-[#34D399] font-semibold' 
+                                        : 'text-[#CCCCCC] hover:bg-[#2D2D30] hover:text-white'
+                                }`}
+                                dir="ltr"
+                            >
+                                <span>{opt.label}</span>
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#107C41]" />}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 };
 
-// -----------------------------------------------------------------------------
-// MAIN COMPONENT
-// -----------------------------------------------------------------------------
+/**
+ * ChartAnalyzer Component
+ * Cognitive chart analysis deck with native Python/Eel bridges.
+ */
 const ChartAnalyzer = () => {
     const { t, lang } = useLanguage();
+    const isRtl = lang === 'fa';
     
-    // Core States
+    // Core Vision States
     const [imagePreview, setImagePreview] = useState(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [result, setResult] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const isCancelledRef = useRef(false);
     
-    // Execution & Settings States
+    // Execution & Configuration States
     const [apiKey, setApiKey] = useState("");
+    const [showKey, setShowKey] = useState(false);
     const lastSavedApiKey = useRef("");
     const [symbol, setSymbol] = useState("XAUUSD");
     const [riskMode, setRiskMode] = useState('percentage');
     const [riskValue, setRiskValue] = useState('1.0');
     const [isDeploying, setIsDeploying] = useState(false);
 
-    // Toast Modal State
+    // Toast/Flyout Notification State
     const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
 
     const riskModeOptions = [
         { label: t('risk_percent') || 'Percentage (%)', value: 'percentage' },
-        { label: t('risk_fixed_usd') || 'Fixed USD', value: 'fixed_usd' },
-        { label: t('risk_fixed_lot') || 'Fixed Lot', value: 'fixed_lot' },
+        { label: t('risk_fixed_usd') || 'Fixed USD ($)', value: 'fixed_usd' },
+        { label: t('risk_fixed_lot') || 'Fixed Volume (Lot)', value: 'fixed_lot' },
     ];
 
+    // Load initial configuration
     useEffect(() => {
         if (window.eel) {
             window.eel.get_initial_data()().then(data => {
-                if (data && data.gemini_api_key) {
+                if (data?.gemini_api_key) {
                     setApiKey(data.gemini_api_key);
                     lastSavedApiKey.current = data.gemini_api_key;
                 }
-            });
+            }).catch(err => console.error("Initial data fetch error:", err));
         }
     }, []);
 
+    // Save Gemini API Key on blur
     const saveApiKey = () => {
         if (apiKey !== lastSavedApiKey.current) {
             if (window.eel) {
-                window.eel.save_user_config({ gemini_api_key: apiKey })();
+                window.eel.save_user_config({ gemini_api_key: apiKey })()
+                    .catch(err => console.error("API Key save error:", err));
                 lastSavedApiKey.current = apiKey; 
-                showToast(lang === 'fa' ? "کلید API با موفقیت ذخیره شد." : "API Key saved successfully.", "success");
+                showToast(lang === 'fa' ? "کلید API با موفقیت ثبت شد." : "API Key saved successfully.", "success");
             }
         }
     };
@@ -123,6 +149,7 @@ const ChartAnalyzer = () => {
         reader.readAsDataURL(file);
     };
 
+    // Global Paste Listener for instant screenshot loading
     const handlePaste = useCallback((e) => {
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -143,16 +170,18 @@ const ChartAnalyzer = () => {
     const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
     const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
     const handleDrop = (e) => {
-        e.preventDefault(); setIsDragging(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
+        e.preventDefault(); 
+        setIsDragging(false);
+        if (e.dataTransfer.files?.length > 0) handleImageFile(e.dataTransfer.files[0]);
     };
 
     const cancelAnalysis = () => {
         isCancelledRef.current = true;
         setIsAnalyzing(false);
-        showToast(lang === 'fa' ? "تحلیل توسط کاربر لغو شد." : "Analysis cancelled by user.", "error");
+        showToast(lang === 'fa' ? "عملیات تحلیل لغو شد." : "Analysis cancelled by user.", "error");
     };
 
+    // Run Vision LLM Analysis
     const runAnalysis = async () => {
         if (!imagePreview || !window.eel) return;
         
@@ -171,19 +200,17 @@ const ChartAnalyzer = () => {
             if (isCancelledRef.current) return;
             
             if (data?.market_state && data.market_state.includes('ERROR')) {
-                showToast(data.price_action_analysis || (lang === 'fa' ? "خطای سیستمی یا شبکه رخ داد." : "System or network error occurred."), 'error');
+                showToast(data.price_action_analysis || (lang === 'fa' ? "خطای ارتباط با سرور هوش مصنوعی رخ داد." : "AI analysis request failed."), 'error');
             }
             
             setResult(data);
-            
         } catch (err) {
             if (isCancelledRef.current) return;
-
             console.error("Backend connection failed:", err);
             if (err.message === 'TIMEOUT') {
-                showToast(lang === 'fa' ? "زمان درخواست به پایان رسید (Timeout). لطفا دوباره تلاش کنید." : "Analysis timed out after 90 seconds.", 'error');
+                showToast(lang === 'fa' ? "زمان تحلیل به پایان رسید (Timeout)." : "Analysis timed out after 90 seconds.", 'error');
             } else {
-                showToast(t('connection_error') || "Connection to Python Backend failed.", 'error');
+                showToast(t('connection_error') || "Connection to core Python engine failed.", 'error');
             }
         } finally {
             if (!isCancelledRef.current) {
@@ -192,307 +219,414 @@ const ChartAnalyzer = () => {
         }
     };
 
+    // Dispatch verified trade order to MetaTrader 5
     const handleDeployToMT5 = async () => {
         if (!result || isDeploying || !symbol) return;
         setIsDeploying(true);
         try {
             const deployRes = await window.eel.deploy_ai_trade_to_mt5(symbol, result, riskMode, parseFloat(riskValue))();
-            
-            if (deployRes && deployRes.success) {
-                showToast(deployRes.message, 'success');
+            if (deployRes?.success) {
+                showToast(deployRes.message || "Order deployed successfully.", 'success');
             } else {
-                showToast(deployRes.message || "Failed to place order.", 'error');
+                showToast(deployRes?.message || "Failed to place order in MT5.", 'error');
             }
         } catch (error) {
-            console.error("Deploy failed:", error);
-            showToast("System error during execution.", 'error');
+            console.error("MT5 Deployment error:", error);
+            showToast("Critical error during MT5 execution bridge.", 'error');
         }
         setIsDeploying(false);
     };
 
-    const getBiasColor = (bias) => {
-        if (bias === 'BUY') return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]';
-        if (bias === 'SELL') return 'text-rose-400 bg-rose-400/10 border-rose-400/20 shadow-[0_0_15px_rgba(244,63,94,0.2)]';
-        return 'text-zinc-400 bg-zinc-400/10 border-zinc-400/20';
+    // Resolve visual theme by trade bias
+    const getBiasBadge = (bias) => {
+        if (bias === 'BUY') {
+            return 'bg-[#107C41]/15 border-[#107C41]/40 text-[#34D399]';
+        }
+        if (bias === 'SELL') {
+            return 'bg-[#C42B1C]/15 border-[#C42B1C]/40 text-[#F87171]';
+        }
+        return 'bg-[#1F1F1F] border-[#333333] text-[#A19F9D]';
     };
 
     const isTradeable = result && result.trade_bias !== 'NEUTRAL' && result.trade_bias !== 'WAIT' && !(result.market_state?.includes('ERROR')) && symbol.trim().length > 0;
 
     return (
-        <div className="flex flex-col w-full h-full p-6 bg-[#0e0e11] text-zinc-300 font-sans overflow-y-auto custom-scroll relative" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
-            
-            {/* Toast Notification Modal */}
+        <div 
+            className="flex flex-col w-full h-full font-['Segoe_UI',-apple-system,BlinkMacSystemFont,sans-serif] text-[#F3F2F1] select-none gap-4"
+            dir={isRtl ? 'rtl' : 'ltr'}
+        >
+            {/* Microsoft WinUI MessageDialog Notification */}
             {toast.show && (
-                <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className={`flex flex-col items-center gap-4 px-6 py-8 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.5)] border max-w-[480px] w-full text-center bg-[#121215] animate-in zoom-in-95 duration-200 ${toast.type === 'success' ? 'border-emerald-500/30' : 'border-rose-500/30'}`}>
-                        <div className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center shadow-inner ${toast.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border border-rose-500/20 text-rose-500'}`}>
-                            {toast.type === 'success' ? (
-                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                            ) : (
-                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                            )}
+                <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] animate-fade-in">
+                    <div className={`flex flex-col items-start p-6 rounded-[8px] border shadow-[0_16px_40px_rgba(0,0,0,0.6)] max-w-md w-full bg-[#242424] ${
+                        toast.type === 'success' ? 'border-[#107C41]' : 'border-[#C42B1C]'
+                    }`}>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className={`w-8 h-8 rounded-[4px] flex items-center justify-center ${
+                                toast.type === 'success' ? 'bg-[#107C41]/20 text-[#34D399]' : 'bg-[#C42B1C]/20 text-[#F87171]'
+                            }`}>
+                                {toast.type === 'success' ? (
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                )}
+                            </div>
+                            <h4 className="text-sm font-semibold text-white">
+                                {toast.type === 'success' ? (lang === 'fa' ? 'عملیات موفق' : 'Success') : (lang === 'fa' ? 'پیام سیستم' : 'System Alert')}
+                            </h4>
                         </div>
-                        <div className="w-full max-h-[50vh] overflow-y-auto custom-scroll px-4 pb-2">
-                            <p className={`text-[13px] font-bold leading-relaxed break-words break-all whitespace-pre-wrap ${toast.type === 'success' ? 'text-emerald-100' : 'text-rose-100'}`} dir="auto">
-                                {toast.message}
-                            </p>
+                        
+                        <p className="text-xs text-[#CCCCCC] leading-relaxed mb-5" dir="auto">
+                            {toast.message}
+                        </p>
+
+                        <div className="flex justify-end w-full">
+                            <button 
+                                type="button"
+                                onClick={() => setToast({ show: false, message: '', type: 'error' })} 
+                                className="px-5 py-1.5 rounded-[4px] bg-[#2D2D2D] hover:bg-[#383838] text-xs font-semibold text-white border border-[#3E3E3E] transition-colors cursor-pointer shadow-sm"
+                            >
+                                {lang === 'fa' ? 'تایید' : 'Dismiss'}
+                            </button>
                         </div>
-                        <button onClick={() => setToast({ show: false, message: '', type: 'error' })} className={`mt-2 px-8 py-2.5 rounded-xl font-bold text-xs transition-colors ${toast.type === 'error' ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20' : 'bg-white/5 hover:bg-white/10 text-zinc-300'}`}>
-                            {lang === 'fa' ? 'بستن پیام' : 'Close'}
-                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Page Header & API Key */}
-            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-                <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2 tracking-tight">
-                        <div className="w-10 h-10 bg-cyan-500/10 border border-cyan-500/30 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                            <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </div>
-                        {t('vision_trade_engine')}
-                    </h1>
-                    <p className="text-zinc-500 text-sm mt-1">{t('vision_engine_desc')}</p>
+            {/* Header Command Deck: Title & API Key Configuration */}
+            <div className="bg-[#242424] border border-[#333333] rounded-[6px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-[4px] bg-[#1F1F1F] border border-[#333333] flex items-center justify-center text-[#107C41] shrink-0 shadow-sm">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 className="text-sm font-semibold text-white tracking-tight leading-tight">
+                            {t('vision_trade_engine') || 'Vision Trade Engine'}
+                        </h1>
+                        <p className="text-[11px] text-[#A19F9D] mt-0.5">
+                            {t('vision_engine_desc') || 'Inspect chart setups via multimodal Gemini AI models and dispatch trades.'}
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 bg-[#151518] border border-white/5 focus-within:border-cyan-500/30 rounded-xl p-1.5 px-3 transition-all max-w-sm w-full shadow-inner z-10">
-                    <svg className="w-4 h-4 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+
+                {/* API Key Box */}
+                <div className="flex items-center gap-2 bg-[#18181B] border border-[#333333] focus-within:border-[#107C41] rounded-[4px] px-2.5 h-8 transition-colors max-w-sm w-full">
+                    <svg className="w-3.5 h-3.5 text-[#797775] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    
                     <input 
-                        type="password" 
+                        type={showKey ? "text" : "password"} 
                         value={apiKey} 
                         onChange={(e) => setApiKey(e.target.value)}
                         onBlur={saveApiKey}
                         placeholder="Google Gemini API Key..."
                         dir="ltr"
-                        className="w-full bg-transparent border-none outline-none text-xs font-mono text-zinc-300 placeholder-zinc-700 py-1"
+                        className="w-full bg-transparent border-none outline-none text-xs font-mono text-white placeholder-[#52525B]"
                     />
+
+                    <button 
+                        type="button" 
+                        onClick={() => setShowKey(!showKey)}
+                        className="text-[#797775] hover:text-[#CCCCCC] text-[10px] font-mono px-1 shrink-0"
+                    >
+                        {showKey ? 'HIDE' : 'SHOW'}
+                    </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative flex-1 min-h-0">
+            {/* Main Workstation Workspace */}
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 flex-1 min-h-0 overflow-y-auto">
                 
-                {/* ----------------------------------------------------------------- */}
-                {/* Left Column: Uploader & Preview */}
-                {/* ----------------------------------------------------------------- */}
-                <div className="xl:col-span-5 flex flex-col gap-4 relative z-20">
+                {/* ------------------------------------------------------------- */}
+                {/* LEFT COLUMN: Image Input & Inspection Controls               */}
+                {/* ------------------------------------------------------------- */}
+                <div className="xl:col-span-5 flex flex-col gap-3.5">
                     
-                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3 shrink-0">
-                        <svg className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    {/* Guidance InfoBar */}
+                    <div className="bg-[#202023] border border-[#333333] rounded-[6px] p-3 flex items-start gap-2.5">
+                        <svg className="w-4 h-4 text-[#60A5FA] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div className="flex flex-col">
-                            <span className="text-amber-500 text-xs font-bold mb-1">{t('note_label')}</span>
-                            <p className="text-[11px] text-amber-200/80 leading-relaxed font-medium" dir="auto">
-                                {t('chart_tips')}
+                            <span className="text-[11px] font-semibold text-white">
+                                {t('note_label') || 'Resolution Guidelines:'}
+                            </span>
+                            <p className="text-[11px] text-[#A19F9D] leading-relaxed mt-0.5" dir="auto">
+                                {t('chart_tips') || 'Capture clean price bars with clear timestamp and price axis visible. Paste (Ctrl+V) directly.'}
                             </p>
                         </div>
                     </div>
 
+                    {/* Chart Dropzone / Preview */}
                     {!imagePreview ? (
                         <div 
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
-                            className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-2xl transition-all duration-200 cursor-pointer shrink-0 ${isDragging ? 'border-cyan-500 bg-cyan-500/5 shadow-[0_0_30px_rgba(6,182,212,0.1)]' : 'border-white/10 hover:border-white/20 bg-[#121215]'}`}
+                            className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-[6px] transition-all cursor-pointer ${
+                                isDragging 
+                                    ? 'border-[#107C41] bg-[#107C41]/5' 
+                                    : 'border-[#333333] hover:border-[#444444] bg-[#18181B]'
+                            }`}
                         >
-                            <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-                                <svg className="w-10 h-10 mb-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <p className="text-sm font-medium text-zinc-300">{t('drag_drop_text')}</p>
-                                <p className="text-xs text-zinc-500 mt-1">{t('paste_screenshot') || t('paste_text')}</p>
-                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageFile(e.target.files[0])} />
+                            <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer p-6 text-center">
+                                <div className="w-10 h-10 rounded-[4px] bg-[#202023] border border-[#333333] flex items-center justify-center text-[#797775] mb-2.5 shadow-sm">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <p className="text-xs font-semibold text-white">
+                                    {t('drag_drop_text') || 'Drag and drop screenshot here'}
+                                </p>
+                                <p className="text-[11px] text-[#797775] mt-1 font-mono">
+                                    {t('paste_screenshot') || 'or press Ctrl+V to paste buffer'}
+                                </p>
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageFile(e.target.files?.[0])} />
                             </label>
                         </div>
                     ) : (
-                        <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 bg-[#09090b] group shadow-xl flex items-center justify-center min-h-[250px] shrink-0">
-                            <img src={imagePreview} alt="Chart to analyze" className="w-full h-auto object-contain max-h-[400px]" />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                        <div className="relative w-full rounded-[6px] overflow-hidden border border-[#333333] bg-[#141416] group shadow-sm flex items-center justify-center min-h-[260px]">
+                            <img src={imagePreview} alt="Chart inspection subject" className="w-full h-auto object-contain max-h-[380px]" />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <button 
-                                    onClick={() => {setImagePreview(null); setResult(null); setIsAnalyzing(false);}}
-                                    className="bg-rose-500/20 text-rose-400 border border-rose-500/50 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-500 hover:text-white transition-all shadow-lg active:scale-95"
+                                    type="button"
+                                    onClick={() => { setImagePreview(null); setResult(null); setIsAnalyzing(false); }}
+                                    className="bg-[#C42B1C] hover:bg-[#B32719] text-white px-4 py-1.5 rounded-[4px] text-xs font-semibold transition-colors shadow-sm cursor-pointer"
                                 >
-                                    {t('clear_image')}
+                                    {t('clear_image') || 'Remove Screenshot'}
                                 </button>
                             </div>
                         </div>
                     )}
 
+                    {/* Action Execution Button */}
                     {isAnalyzing ? (
                         <button 
+                            type="button"
                             onClick={cancelAnalysis}
-                            className="w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 shadow-[0_0_20px_rgba(244,63,94,0.3)] bg-rose-500/20 text-rose-400 border border-rose-500/50 hover:bg-rose-500 hover:text-white active:scale-[0.98] shrink-0"
+                            className="w-full h-10 rounded-[4px] font-semibold text-xs flex items-center justify-center gap-2 bg-[#C42B1C] hover:bg-[#B32719] text-white border border-[#C42B1C] transition-colors cursor-pointer shadow-sm"
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            {lang === 'fa' ? 'لغو عملیات' : 'Cancel Analysis'}
+                            <span>{lang === 'fa' ? 'انصراف و لغو پردازش' : 'Halt Cognitive Analysis'}</span>
                         </button>
                     ) : (
                         <button 
+                            type="button"
                             onClick={runAnalysis}
                             disabled={!imagePreview || !apiKey}
-                            className={`w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shrink-0 ${!imagePreview || !apiKey ? 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5' : 'bg-cyan-600 text-white hover:bg-cyan-500 border border-cyan-400 active:scale-[0.98]'}`}
+                            className={`w-full h-10 rounded-[4px] font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-sm ${
+                                !imagePreview || !apiKey 
+                                    ? 'bg-[#242424] text-[#797775] border border-[#333333] cursor-not-allowed' 
+                                    : 'bg-[#107C41] hover:bg-[#0E6B37] text-white border border-[#107C41] cursor-pointer'
+                            }`}
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                            {t('run_deep_analysis')}
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            <span>{t('run_deep_analysis') || 'Execute Deep Vision Inference'}</span>
                         </button>
                     )}
-                    {!apiKey && <p className="text-center text-[10px] text-rose-500 font-bold -mt-3">API Key Required</p>}
+                    {!apiKey && (
+                        <span className="text-[10px] font-mono text-[#F87171] text-center">
+                            * Gemini API Key required to run vision model
+                        </span>
+                    )}
                 </div>
 
-                {/* ----------------------------------------------------------------- */}
-                {/* Right Column: AI Analysis Results & Execution Panels */}
-                {/* ----------------------------------------------------------------- */}
-                <div className="xl:col-span-7 flex flex-col gap-4 h-full relative z-10 min-h-0 pb-4">
+                {/* ------------------------------------------------------------- */}
+                {/* RIGHT COLUMN: Inference Results & Execution Order Ticket     */}
+                {/* ------------------------------------------------------------- */}
+                <div className="xl:col-span-7 flex flex-col gap-3.5 h-full min-h-0">
                     {!result ? (
-                        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl bg-[#121215] p-8 text-center min-h-[300px]">
+                        <div className="flex-1 flex flex-col items-center justify-center border border-[#333333] rounded-[6px] bg-[#242424] p-8 text-center min-h-[300px]">
                             {isAnalyzing ? (
-                                <div className="flex flex-col items-center justify-center animate-fade-in">
-                                    <div className="relative w-20 h-20 mb-6">
-                                        <div className="absolute inset-0 border-4 border-cyan-500/20 rounded-full"></div>
-                                        <div className="absolute inset-0 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <svg className="absolute inset-0 m-auto w-8 h-8 text-cyan-500/80 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-cyan-400 font-bold text-lg tracking-wide mb-2">{t('analyzing_chart')}</h3>
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="w-10 h-10 rounded-full border-2 border-[#107C41] border-t-transparent animate-spin mb-3" />
+                                    <h3 className="text-sm font-semibold text-white tracking-tight">
+                                        {t('analyzing_chart') || 'Analyzing Chart via Multimodal LLM...'}
+                                    </h3>
+                                    <p className="text-xs text-[#A19F9D] mt-1 font-mono">
+                                        Extracting price action confluences, support/resistance & liquidity zones
+                                    </p>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="w-20 h-20 rounded-full bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center mb-6">
-                                        <svg className="w-10 h-10 text-cyan-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    <div className="w-10 h-10 rounded-[4px] bg-[#1F1F1F] border border-[#333333] flex items-center justify-center text-[#797775] mb-2.5">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-zinc-300 font-bold text-lg tracking-wide">{t('awaiting_chart')}</h3>
-                                    <p className="text-zinc-500 text-sm mt-2 max-w-sm leading-relaxed">{t('awaiting_chart_desc')}</p>
+                                    <h3 className="text-sm font-semibold text-white tracking-tight">
+                                        {t('awaiting_chart') || 'Awaiting Chart Input'}
+                                    </h3>
+                                    <p className="text-xs text-[#A19F9D] mt-1 max-w-sm leading-relaxed">
+                                        {t('awaiting_chart_desc') || 'Upload or paste an image to extract actionable signals, structural zones, and risk boundaries.'}
+                                    </p>
                                 </>
                             )}
                         </div>
                     ) : (
                         <>
-                            {/* Panel 1: Analysis Details (Takes available space, scrolls if needed) */}
-                            <div className="flex-1 flex flex-col bg-[#121215] border border-white/10 rounded-2xl p-5 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative min-h-0">
-                                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
-                                    <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-[100px] opacity-10 ${result.trade_bias === 'BUY' ? 'bg-emerald-500' : result.trade_bias === 'SELL' ? 'bg-rose-500' : 'bg-zinc-500'}`}></div>
-                                </div>
+                            {/* Panel 1: Structured Telemetry Results */}
+                            <div className="bg-[#242424] border border-[#333333] rounded-[6px] p-4 flex flex-col gap-3.5 shadow-sm overflow-hidden">
+                                
+                                {/* Metrics Strip */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2.5 flex flex-col items-center justify-center text-center">
+                                        <span className="text-[10px] font-mono text-[#797775] uppercase tracking-wider mb-1">
+                                            {t('trade_bias') || 'Trade Bias'}
+                                        </span>
+                                        <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-[2px] border ${getBiasBadge(result.trade_bias)}`}>
+                                            {result.trade_bias || 'NEUTRAL'}
+                                        </span>
+                                    </div>
 
-                                {/* Top Stats Row */}
-                                <div className="grid grid-cols-3 gap-3 relative z-10 shrink-0">
-                                    <div className="bg-[#0e0e11] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center text-center">
-                                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 font-bold">{t('trade_bias')}</span>
-                                        <span className={`text-sm font-bold border px-3 py-1 rounded-lg ${getBiasColor(result.trade_bias)}`}>
-                                            {result.trade_bias}
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2.5 flex flex-col items-center justify-center text-center">
+                                        <span className="text-[10px] font-mono text-[#797775] uppercase tracking-wider mb-1">
+                                            {t('market_state') || 'Structure'}
+                                        </span>
+                                        <span className={`text-xs font-mono font-bold truncate max-w-full px-1 ${
+                                            result.market_state?.includes('ERROR') ? 'text-[#F87171]' : 'text-[#60A5FA]'
+                                        }`}>
+                                            {result.market_state?.replace(/_/g, ' ') || 'N/A'}
                                         </span>
                                     </div>
-                                    <div className="bg-[#0e0e11] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center text-center">
-                                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 font-bold">{t('market_state')}</span>
-                                        <span className={`text-sm font-bold truncate w-full px-2 ${result.market_state?.includes('ERROR') ? 'text-rose-500' : 'text-blue-400'}`}>
-                                            {result.market_state?.replace(/_/g, ' ')}
+
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2.5 flex flex-col items-center justify-center text-center">
+                                        <span className="text-[10px] font-mono text-[#797775] uppercase tracking-wider mb-1">
+                                            {t('ai_confidence') || 'Confidence'}
                                         </span>
-                                    </div>
-                                    <div className="bg-[#0e0e11] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center text-center">
-                                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 font-bold">{t('ai_confidence')}</span>
-                                        <span className={`text-lg font-bold ${result.confidence_score >= 70 ? 'text-emerald-400' : result.confidence_score >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                        <span className={`text-xs font-mono font-bold ${
+                                            result.confidence_score >= 70 ? 'text-[#34D399]' : result.confidence_score >= 50 ? 'text-[#FCE100]' : 'text-[#F87171]'
+                                        }`}>
                                             {result.confidence_score}%
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Signal Execution Zones */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 relative z-10 shrink-0">
-                                    <div className="bg-[#09090b] border border-blue-500/20 rounded-xl p-3 flex flex-col justify-center shadow-inner">
-                                        <span className="text-[9px] text-blue-400/80 uppercase font-bold tracking-widest block mb-1">{t('entry_zone')}</span>
-                                        <span className="text-sm text-white font-mono font-bold truncate" dir="ltr">{result.entry_zone || 'N/A'}</span>
+                                {/* Order Quotation Level Grid */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2">
+                                        <span className="text-[9px] font-mono text-[#797775] uppercase block mb-0.5">
+                                            {t('entry_zone') || 'Entry Zone'}
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-white truncate block" dir="ltr">
+                                            {result.entry_zone || 'N/A'}
+                                        </span>
                                     </div>
-                                    <div className="bg-[#09090b] border border-rose-500/20 rounded-xl p-3 flex flex-col justify-center shadow-inner">
-                                        <span className="text-[9px] text-rose-400/80 uppercase font-bold tracking-widest block mb-1">{t('stop_loss')}</span>
-                                        <span className="text-sm text-rose-400 font-mono font-bold truncate" dir="ltr">{result.stop_loss || 'N/A'}</span>
+
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2">
+                                        <span className="text-[9px] font-mono text-[#F87171] uppercase block mb-0.5">
+                                            {t('stop_loss') || 'Stop Loss'}
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-[#F87171] truncate block" dir="ltr">
+                                            {result.stop_loss || 'N/A'}
+                                        </span>
                                     </div>
-                                    <div className="bg-[#09090b] border border-emerald-500/20 rounded-xl p-3 flex flex-col justify-center shadow-inner">
-                                        <span className="text-[9px] text-emerald-400/80 uppercase font-bold tracking-widest block mb-1">{t('take_profit_1')}</span>
-                                        <span className="text-sm text-emerald-400 font-mono font-bold truncate" dir="ltr">{result.take_profit_1 || 'N/A'}</span>
+
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2">
+                                        <span className="text-[9px] font-mono text-[#34D399] uppercase block mb-0.5">
+                                            {t('take_profit_1') || 'Take Profit 1'}
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-[#34D399] truncate block" dir="ltr">
+                                            {result.take_profit_1 || 'N/A'}
+                                        </span>
                                     </div>
-                                    <div className="bg-[#09090b] border border-emerald-500/20 rounded-xl p-3 flex flex-col justify-center shadow-inner">
-                                        <span className="text-[9px] text-emerald-400/80 uppercase font-bold tracking-widest block mb-1">{t('take_profit_2')}</span>
-                                        <span className="text-sm text-emerald-400 font-mono font-bold truncate" dir="ltr">{result.take_profit_2 || 'N/A'}</span>
+
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2">
+                                        <span className="text-[9px] font-mono text-[#34D399] uppercase block mb-0.5">
+                                            {t('take_profit_2') || 'Take Profit 2'}
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-[#34D399] truncate block" dir="ltr">
+                                            {result.take_profit_2 || 'N/A'}
+                                        </span>
                                     </div>
                                 </div>
 
-                                {/* Scrollable Analysis Details */}
-                                <div className="flex flex-col gap-3 mt-4 relative z-10 flex-1 overflow-y-auto pr-2 custom-scroll">
-                                    <div className="bg-[#0e0e11] border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors">
-                                        <h4 className="text-[10px] text-purple-400 font-bold uppercase tracking-widest flex items-center gap-2 mb-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_5px_#a855f7]"></span>
-                                            {t('price_action_logic')}
-                                        </h4>
-                                        <p className="text-xs text-zinc-300 leading-relaxed" dir="auto">{result.price_action_analysis}</p>
-                                    </div>
-                                    
-                                    <div className="bg-[#0e0e11] border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors">
-                                        <h4 className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest flex items-center gap-2 mb-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_#06b6d4]"></span>
-                                            {t('indicators_confluence')}
-                                        </h4>
-                                        <p className="text-xs text-zinc-300 leading-relaxed" dir="auto">{result.indicators_analysis}</p>
+                                {/* Reasoning Sections */}
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                    <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2.5">
+                                        <span className="text-[10px] font-mono font-semibold uppercase text-[#60A5FA] block mb-1">
+                                            {t('price_action_logic') || 'Price Action Assessment'}
+                                        </span>
+                                        <p className="text-xs text-[#CCCCCC] leading-relaxed" dir="auto">
+                                            {result.price_action_analysis}
+                                        </p>
                                     </div>
 
-                                    {result.risk_note && result.risk_note !== "N/A" && (
-                                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 flex items-start gap-3 mt-auto shrink-0">
-                                            <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                            <p className="text-[11px] text-amber-200/80 leading-relaxed font-medium" dir="auto">
-                                                <span className="text-amber-500 font-bold mr-1">{t('risk_warning') || 'Warning:'}</span>{result.risk_note}
+                                    {result.indicators_analysis && (
+                                        <div className="bg-[#18181B] border border-[#333333] rounded-[4px] p-2.5">
+                                            <span className="text-[10px] font-mono font-semibold uppercase text-[#34D399] block mb-1">
+                                                {t('indicators_confluence') || 'Technical Confluence'}
+                                            </span>
+                                            <p className="text-xs text-[#CCCCCC] leading-relaxed" dir="auto">
+                                                {result.indicators_analysis}
                                             </p>
+                                        </div>
+                                    )}
+
+                                    {result.risk_note && result.risk_note !== "N/A" && (
+                                        <div className="p-2.5 rounded-[4px] bg-[#FCE100]/10 border border-[#FCE100]/30 text-[11px] text-[#FCE100] leading-relaxed flex items-start gap-2" dir="auto">
+                                            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <span><strong>{t('risk_warning') || 'Notice:'}</strong> {result.risk_note}</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Panel 2: Execution Setup (Standalone Card at the Bottom) */}
-                            <div className="shrink-0 bg-[#0c0c0e] border border-rose-500/20 rounded-2xl p-5 shadow-[0_10px_40px_-15px_rgba(244,63,94,0.15)] relative z-20 animate-in fade-in slide-in-from-bottom-6 duration-500 delay-100">
+                            {/* Panel 2: MT5 Trade Execution Order Ticket */}
+                            <div className="bg-[#242424] border border-[#333333] rounded-[6px] p-4 flex flex-col gap-3 shadow-sm">
                                 
-                                {/* Disclaimer / Warning Message */}
-                                <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3 mb-5">
-                                    <svg className="w-5 h-5 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                {/* Microsoft Disclaimer Callout */}
+                                <div className="p-2.5 rounded-[4px] bg-[#C42B1C]/10 border border-[#C42B1C]/30 text-[11px] text-[#F87171] leading-relaxed flex items-start gap-2">
+                                    <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
-                                    <div className="flex flex-col">
-                                        <span className="text-rose-500 text-xs font-bold mb-1">{lang === 'fa' ? 'سلب مسئولیت مهم:' : 'Important Disclaimer:'}</span>
-                                        <p className="text-[11px] text-rose-200/80 leading-relaxed font-medium" dir="auto">
-                                            {lang === 'fa' 
-                                                ? 'بازارهای مالی همواره با ریسک بالای از دست رفتن سرمایه همراه هستند. سیستم هوش مصنوعی تنها یک ابزار دستیار است و هیچ‌گونه مسئولیتی در قبال زیان‌های احتمالی شما ندارد. لطفاً پیش از زدن دکمه اجرای معامله، از صحت تحلیل، نماد و حجم انتخابی خود کاملاً اطمینان حاصل کنید.' 
-                                                : 'Financial markets carry a high risk of capital loss. The AI system is solely an assistive tool and assumes no liability for potential losses. Please ensure the accuracy of your analysis, symbol, and selected risk volume before clicking the execute button.'
-                                            }
-                                        </p>
-                                    </div>
+                                    <p dir="auto">
+                                        <strong>{lang === 'fa' ? 'سلب مسئولیت:' : 'Important Risk Notice:'}</strong>{' '}
+                                        {lang === 'fa' 
+                                            ? 'بازارهای مالی با ریسک همراه هستند. هوش مصنوعی صرفاً نقش دستیار را دارد و مسئولیتی متوجه آن نیست.' 
+                                            : 'Financial trading incurs risk of loss. Verify all order parameters before dispatching to MT5.'}
+                                    </p>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-50">
+                                {/* Inputs Row */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                                     
-                                    {/* Symbol Box */}
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] text-zinc-500 font-bold uppercase mx-1">{t('symbol_label') || 'Symbol'}</label>
-                                        <div className="h-12 bg-[#151518] rounded-xl border border-white/5 focus-within:border-cyan-500/50 transition-colors shadow-inner flex items-center px-4 relative overflow-hidden">
-                                            <input 
-                                                type="text" 
-                                                value={symbol} 
-                                                onChange={(e) => setSymbol(e.target.value)}
-                                                dir="ltr"
-                                                className="w-full h-full bg-transparent border-none outline-none text-white font-mono font-bold text-base placeholder-zinc-700 tracking-widest"
-                                                placeholder="XAUUSD"
-                                            />
-                                        </div>
+                                    {/* Symbol Field */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-mono font-semibold uppercase text-[#A19F9D]">
+                                            {t('symbol_label') || 'Symbol'}
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            value={symbol} 
+                                            onChange={(e) => setSymbol(e.target.value)}
+                                            dir="ltr"
+                                            className="w-full h-8 bg-[#18181B] border border-[#333333] focus:border-[#107C41] rounded-[4px] px-2.5 text-xs font-mono font-bold text-white uppercase outline-none"
+                                            placeholder="XAUUSD"
+                                        />
                                     </div>
 
-                                    {/* Risk Mode Dropdown */}
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] text-zinc-500 font-bold uppercase mx-1">{t('risk_mode') || 'Risk Type'}</label>
-                                        <div className="h-12 bg-[#151518] rounded-xl border border-white/5 hover:border-white/10 transition-colors shadow-inner relative z-50">
-                                            <CustomSelect 
+                                    {/* Risk Mode Field */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-mono font-semibold uppercase text-[#A19F9D]">
+                                            {t('risk_mode') || 'Risk Type'}
+                                        </label>
+                                        <div className="h-8">
+                                            <FluentCustomSelect 
                                                 value={riskMode}
                                                 options={riskModeOptions}
                                                 onChange={setRiskMode}
@@ -500,59 +634,66 @@ const ChartAnalyzer = () => {
                                         </div>
                                     </div>
 
-                                    {/* Risk Value Input */}
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-[10px] text-zinc-500 font-bold uppercase mx-1">{t('risk_value') || 'Risk Value'}</label>
-                                        <div className="h-12 bg-[#151518] rounded-xl border border-white/5 hover:border-white/10 focus-within:border-emerald-500/50 transition-all shadow-inner flex items-center relative overflow-hidden group">
+                                    {/* Risk Value Field */}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-mono font-semibold uppercase text-[#A19F9D]">
+                                            {t('risk_value') || 'Risk Metric'}
+                                        </label>
+                                        <div className="h-8 bg-[#18181B] border border-[#333333] focus-within:border-[#107C41] rounded-[4px] px-2.5 flex items-center justify-between">
                                             <input 
                                                 type="number"
                                                 step="any"
                                                 value={riskValue} 
                                                 onChange={(e) => setRiskValue(e.target.value)}
                                                 dir="ltr"
-                                                className="w-full h-full bg-transparent border-none outline-none text-emerald-400 font-mono font-bold text-lg px-4 placeholder-zinc-700 focus:text-white transition-colors"
+                                                className="w-full bg-transparent border-none outline-none text-xs font-mono font-bold text-[#34D399]"
                                                 placeholder="1.0"
                                             />
-                                            {/* Absolute positioning to prevent flexbox collapsing issues */}
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                <span className="text-[10px] font-bold text-zinc-500 group-focus-within:text-emerald-400/70 transition-colors bg-[#151518] pl-2">
-                                                    {riskMode === 'percentage' ? '%' : riskMode === 'fixed_lot' ? 'LOT' : 'USD'}
-                                                </span>
-                                            </div>
+                                            <span className="text-[10px] font-mono text-[#797775] ml-1 shrink-0">
+                                                {riskMode === 'percentage' ? '%' : riskMode === 'fixed_lot' ? 'LOT' : 'USD'}
+                                            </span>
                                         </div>
                                     </div>
 
-                                    {/* Deploy Button */}
-                                    <div className="flex flex-col justify-end mt-1 lg:mt-0">
+                                    {/* Deploy Action */}
+                                    <div className="flex flex-col justify-end">
                                         <button 
+                                            type="button"
                                             onClick={handleDeployToMT5}
                                             disabled={!isTradeable || isDeploying}
-                                            className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden shadow-lg ${
+                                            className={`w-full h-8 rounded-[4px] font-semibold text-xs tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm ${
                                                 !isTradeable 
-                                                ? 'bg-[#151518] text-zinc-600 cursor-not-allowed border border-white/5 shadow-none' 
-                                                : isDeploying 
-                                                ? 'bg-emerald-500 text-white cursor-wait'
-                                                : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20 hover:shadow-emerald-500/40 active:scale-95 border border-emerald-400/50'
+                                                    ? 'bg-[#18181B] text-[#52525B] border border-[#333333] cursor-not-allowed' 
+                                                    : isDeploying 
+                                                    ? 'bg-[#107C41] text-white cursor-wait opacity-80' 
+                                                    : 'bg-[#107C41] hover:bg-[#0E6B37] active:bg-[#0C5B2F] text-white border border-[#107C41] cursor-pointer'
                                             }`}
                                         >
                                             {isDeploying ? (
                                                 <>
-                                                    <svg className="animate-spin h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                    <span className="truncate">{t('executing')}</span>
+                                                    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                    </svg>
+                                                    <span>{t('executing') || 'Dispatching...'}</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                                    <span className="tracking-wide uppercase truncate">{t('deploy_mt5')}</span>
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                    </svg>
+                                                    <span className="uppercase">{t('deploy_mt5') || 'Deploy MT5'}</span>
                                                 </>
                                             )}
                                         </button>
                                     </div>
+
                                 </div>
                             </div>
                         </>
                     )}
                 </div>
+
             </div>
         </div>
     );

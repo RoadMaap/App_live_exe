@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { LanguageProvider } from './context/LanguageContext';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
+import { ThemeProvider } from './context/ThemeContext';
+import Login from './components/auth/Login';
+import Dashboard from './components/home/Dashboard';
 
 function MainApp() {
-  const [view, setView] = useState('login'); 
+  const [view, setView] = useState('login');
 
   if (view === 'login') {
     return <Login onLoginSuccess={() => setView('dashboard')} />;
@@ -15,9 +16,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    // حالا فقط Provider زبان باقی مانده و پروژه بسیار سبک‌تر شده است
-    <LanguageProvider>
-      <MainApp />
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <MainApp />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

@@ -1,68 +1,144 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useId } from 'react';
 
-const getPath = (data, width, height) => {
-  if (data.length === 0) return "";
-  const min = Math.min(...data, 0);
-  let max = Math.max(...data, 0);
-  if (min === max) max += 1;
-  const range = max - min;
+/**
+ * Calculates cubic bezier SVG path strings for line stroke and filled area.
+ * Incorporates vertical padding to prevent vector clipping on high peaks.
+ */
+const computeSparklineGeometry = (data, width, height) => {
+    if (!data || data.length === 0) return { pathD: "", fillD: "", lastPoint: null, zeroY: null };
 
-  // تغییر مهم: اضافه کردن پدینگ داخلی برای اینکه ضخامت خط بریده نشود
-  const paddingY = 4; // 4 پیکسل فاصله از بالا و پایین
-  const usableHeight = height - (paddingY * 2);
+    const numericData = data.map(value => Number(value) || 0);
+    let min = Math.min(...numericData, 0);
+    let max = Math.max(...numericData, 0);
+    if (min === max) {
+        const scale = Math.max(Math.abs(min), 1);
+        min -= scale;
+        max += scale;
+    }
+    const range = max - min;
 
-  const points = data.map((val, index) => {
-    const x = (index / (data.length - 1)) * width;
+    // Safety vertical padding to guarantee line stroke visibility
+    const paddingY = 5;
+    const usableHeight = height - (paddingY * 2);
+
+    const points = numericData.map((val, index) => {
+        const x = numericData.length === 1 ? width / 2 : (index / (numericData.length - 1)) * width;
+        const normalizedVal = (val - min) / range;
+        const y = (height - paddingY) - (normalizedVal * usableHeight);
+        return [x, y];
+    });
+
+    // Generate smooth cubic bezier curve
+    const pathD = points.reduce((acc, [x, y], i, arr) => {
+        if (i === 0) return `M ${x},${y}`;
+        const [x0, y0] = arr[i - 1];
+        const [x1, y1] = [x, y];
+        const controlPointX = (x1 - x0) * 0.35;
+        return `${acc} C ${x0 + controlPointX},${y0} ${x1 - controlPointX},${y1} ${x1},${y1}`;
+    }, "");
+
+    const lastPoint = points[points.length - 1];
     
-    // محاسبه دقیق Y:
-    // نمودار بین (paddingY) تا (height - paddingY) رسم می‌شود
-    const normalizedVal = (val - min) / range; // عددی بین 0 تا 1
-    const y = (height - paddingY) - (normalizedVal * usableHeight);
-    
-    return [x, y];
-  });
+    // Baseline zero Y position calculation
+    const zeroY = min < 0 ? (height - paddingY) - ((0 - min) / range) * usableHeight : null;
 
-  return points.reduce((acc, [x, y], i, arr) => {
-    if (i === 0) return `M ${x},${y}`;
-    const [x0, y0] = arr[i - 1];
-    const [x1, y1] = [x, y];
-    // تنظیم نرمی نمودار
-    const controlPointX = (x1 - x0) * 0.35;
-    return `${acc} C ${x0 + controlPointX},${y0} ${x1 - controlPointX},${y1} ${x1},${y1}`;
-  }, "");
+    return {
+        pathD,
+        fillD: `${pathD} V ${height} H 0 Z`,
+        lastPoint,
+        zeroY
+    };
 };
 
-const Sparkline = ({ data = [], color = "#10b981" }) => {
-  // ابعاد viewBox
-  const width = 100;
-  const height = 45; // کمی ارتفاع را بیشتر کردم تا جا بازتر باشد
+/**
+ * Sparkline Component
+ * Microsoft Fluent 2 financial micro-chart with live pulse telemetry.
+ */
+const Sparkline = ({ data = [], color = "#107C41" }) => {
+    const rawId = useId();
+    const gradientId = useMemo(() => `spark-${rawId.replace(/:/g, '')}`, [rawId]);
 
-  const { pathD, fillD } = useMemo(() => {
-    if (!data || data.length < 2) return { pathD: "", fillD: "" };
-    const d = getPath(data, width, height);
-    return {
-      pathD: d,
-      // بستن ناحیه پر شده به کف نمودار
-      fillD: `${d} V ${height} H 0 Z`
-    };
-  }, [data, height]); // height به وابستگی‌ها اضافه شد
+    const width = 100;
+    const height = 24;
 
-  return (
-    // overflow-visible می‌گذاریم تا اگر احیاناً پیکسلی بیرون زد، دیده شود
-    // اما چون محاسبات را درست کردیم، نباید بیرون بزند.
-    <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-      <defs>
-        <linearGradient id={`sparkGradient-${color}`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* ناحیه پر شده زیر نمودار */}
-      <path d={fillD} fill={`url(#sparkGradient-${color})`} stroke="none" className="transition-[d] duration-500 ease-out" />
-      {/* خط اصلی نمودار با ضخامت 2 */}
-      <path d={pathD} stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" className="transition-[d] duration-500 ease-out" />
-    </svg>
-  );
+    const { pathD, fillD, lastPoint, zeroY } = useMemo(() => {
+        if (!data || data.length < 2) {
+            return { pathD: "", fillD: "", lastPoint: null, zeroY: null };
+        }
+        return computeSparklineGeometry(data, width, height);
+    }, [data, width, height]);
+
+    if (!pathD) {
+        return <div className="w-full h-full flex items-center justify-center text-[10px] font-mono text-[#52525B]">--</div>;
+    }
+
+    return (
+        <svg 
+            className="w-full h-full overflow-visible select-none" 
+            viewBox={`0 0 ${width} ${height}`} 
+            preserveAspectRatio="xMidYMid meet"
+        >
+            <defs>
+                {/* Surface backdrop gradient matching Fluent 2 palette */}
+                <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+                    <stop offset="75%" stopColor={color} stopOpacity="0.04" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.0" />
+                </linearGradient>
+            </defs>
+
+            {/* Optional zero baseline reference when balance dips into negative values */}
+            {zeroY !== null && (
+                <line 
+                    x1="0" 
+                    y1={zeroY} 
+                    x2={width} 
+                    y2={zeroY} 
+                    stroke="#333333" 
+                    strokeDasharray="2 2" 
+                    strokeWidth="0.8" 
+                    vectorEffect="non-scaling-stroke"
+                />
+            )}
+
+            {/* Fluid fill region beneath curve */}
+            <path 
+                d={fillD} 
+                fill={`url(#${gradientId})`} 
+                stroke="none" 
+                className="transition-[d] duration-500 ease-out" 
+            />
+
+            {/* Primary stroke line */}
+            <path 
+                d={pathD} 
+                stroke={color} 
+                strokeWidth="1.75" 
+                fill="none" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                vectorEffect="non-scaling-stroke" 
+                className="transition-[d] duration-500 ease-out" 
+            />
+
+            {/* Live endpoint telemetry indicator */}
+            {lastPoint && (
+                    <g className="transition-transform duration-500 ease-out" transform={`translate(${lastPoint[0]} ${lastPoint[1]})`}>
+                    <circle 
+                        r="3.5" 
+                        fill={color} 
+                        className="animate-ping opacity-60" 
+                    />
+                    <circle 
+                        r="2" 
+                        fill="#FFFFFF" 
+                        stroke={color} 
+                        strokeWidth="1" 
+                    />
+                </g>
+            )}
+        </svg>
+    );
 };
 
 export default Sparkline;

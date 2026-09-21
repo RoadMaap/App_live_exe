@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
+/**
+ * CustomSelect Component
+ * Implements Microsoft Fluent 2 ComboBox pattern.
+ */
 const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
@@ -18,55 +22,91 @@ const CustomSelect = ({ label, value, options, onChange, prefixIcon }) => {
     const selectedLabel = (options || []).find(opt => opt.value === value)?.label || value;
 
     return (
-        <div className="relative w-full group" ref={containerRef}>
-            {label && <label className="text-[9px] text-zinc-500 font-bold mb-1.5 block">{label}</label>}
+        <div className="relative w-full" ref={containerRef}>
+            {label && (
+                <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D] mb-1.5 block">
+                    {label}
+                </label>
+            )}
             
             <button 
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full flex items-center justify-between bg-[#18181b] border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 transition-all outline-none hover:border-white/10 hover:bg-[#1a1a20] ${isOpen ? 'border-emerald-500/50 bg-[#1a1a20]' : ''}`}
+                className={`w-full h-8 flex items-center justify-between bg-[#18181B] border rounded-[4px] px-2.5 text-xs text-[#E1DFDD] font-mono transition-all outline-none cursor-pointer ${
+                    isOpen 
+                        ? 'border-[#107C41] bg-[#1F1F22]' 
+                        : 'border-[#333333] hover:border-[#444444] hover:bg-[#1C1C1F]'
+                }`}
             >
                 <span className="flex items-center gap-2 truncate" dir="ltr">
-                    {prefixIcon && <span className="text-emerald-500">{prefixIcon}</span>}
-                    {selectedLabel}
+                    {prefixIcon && <span className="text-[#107C41]">{prefixIcon}</span>}
+                    <span className="truncate">{selectedLabel}</span>
                 </span>
                 
                 <svg 
-                    className={`w-3 h-3 text-zinc-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-emerald-500' : ''}`} 
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    className={`w-3.5 h-3.5 text-[#797775] transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#107C41]' : ''}`} 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
                 >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
-            <div className={`absolute left-0 top-full mt-1 w-full bg-[#18181b] border border-white/10 rounded-lg shadow-xl overflow-hidden z-50 origin-top transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2'}`}>
-                <div className="max-h-48 overflow-y-auto custom-scroll py-1">
-                    {(options || []).map((opt) => (
-                        <div 
-                            key={opt.value}
-                            onClick={() => {
-                                onChange(opt.value);
-                                setIsOpen(false);
-                            }}
-                            className={`px-3 py-2 text-xs cursor-pointer flex items-center gap-2 transition-colors ${value === opt.value ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`}
-                            dir="ltr"
-                        >
-                            <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 transition-opacity ${value === opt.value ? 'opacity-100' : 'opacity-0'}`}></div>
-                            {opt.label}
-                        </div>
-                    ))}
+            {/* Fluent Flyout Menu */}
+            <div className={`absolute left-0 top-full mt-1 w-full bg-[#242424] border border-[#3E3E3E] rounded-[4px] shadow-[0_8px_24px_rgba(0,0,0,0.5)] overflow-hidden z-50 transition-all duration-150 origin-top ${
+                isOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
+            }`}>
+                <div className="max-h-48 overflow-y-auto py-1">
+                    {(options || []).map((opt) => {
+                        const isSelected = value === opt.value;
+                        return (
+                            <div 
+                                key={opt.value}
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-mono cursor-pointer flex items-center justify-between transition-colors ${
+                                    isSelected 
+                                        ? 'bg-[#107C41]/15 text-[#34D399] font-semibold' 
+                                        : 'text-[#CCCCCC] hover:bg-[#2D2D30] hover:text-white'
+                                }`}
+                                dir="ltr"
+                            >
+                                <span className="truncate">{opt.label}</span>
+                                {isSelected && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#107C41]" />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 };
 
+/**
+ * StrategyPanel Component
+ * Main strategy manager engineered with WinUI 3 workstation patterns.
+ */
 const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
-    const { t } = useLanguage();
+    const { t, lang } = useLanguage();
+    const isRtl = lang === 'fa';
     const [isLoading, setIsLoading] = useState(false);
     const [expandedStrategies, setExpandedStrategies] = useState([]);
 
     const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
-    const dayLabels = [t('day_mon'), t('day_tue'), t('day_wed'), t('day_thu'), t('day_fri'), t('day_sat'), t('day_sun')];
+    const dayLabels = [
+        t('day_mon') || 'Mon', 
+        t('day_tue') || 'Tue', 
+        t('day_wed') || 'Wed', 
+        t('day_thu') || 'Thu', 
+        t('day_fri') || 'Fri', 
+        t('day_sat') || 'Sat', 
+        t('day_sun') || 'Sun'
+    ];
 
     const timeframeToSeconds = {
         'M1': 60, 'M5': 300, 'M15': 900, 'M30': 1800, 'H1': 3600, 'H4': 14400, 'D1': 86400,
@@ -88,7 +128,7 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
 
     const handleImport = async () => {
         setIsLoading(true);
-        if(window.eel) {
+        if (window.eel) {
             try {
                 const path = await window.eel.open_strategy_file_dialog()();
                 if (path) {
@@ -98,7 +138,7 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                     }
                 }
             } catch (err) {
-                console.error("Import Error:", err);
+                console.error("Strategy Import Error:", err);
             }
         }
         setIsLoading(false);
@@ -106,21 +146,19 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
 
     const handleDelete = async (name, e) => {
         e.stopPropagation();
-        if(window.eel) {
+        if (window.eel) {
             try {
                 const newStrategies = await window.eel.remove_strategy(name)();
                 if (newStrategies) onStrategiesChange(newStrategies);
             } catch (err) {
-                console.error("Delete Error:", err);
+                console.error("Strategy Deletion Error:", err);
             }
         }
     };
 
-    // =========================================================================
-    // PARAMETERS LOGIC
-    // =========================================================================
+    // Parameter Update Handlers
     const saveParamToBackend = (strategyName, paramKey, value) => {
-        if(window.eel) window.eel.update_strategy_param(strategyName, paramKey, value)();
+        if (window.eel) window.eel.update_strategy_param(strategyName, paramKey, value)();
     };
 
     const handleParamChange = (strategyName, paramKey, newValue) => {
@@ -140,12 +178,10 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         let finalValue = currentValue;
         const strVal = String(currentValue).trim();
         
-        // Validation: Prevent empty strings and zero values
         if (strVal === '') {
             finalValue = originalType === 'number' ? 1 : '1';
         } else if (originalType === 'number') {
             const parsed = parseFloat(strVal);
-            // If it parses to NaN or exactly 0, fallback to 1 to ensure validity
             if (isNaN(parsed) || parsed === 0) {
                 finalValue = 1;
             } else {
@@ -155,7 +191,6 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
             finalValue = '1';
         }
 
-        // Update local state with the corrected validated value
         onStrategiesChange(prevStrategies => ({
             ...prevStrategies,
             [strategyName]: {
@@ -170,11 +205,7 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         saveParamToBackend(strategyName, paramKey, finalValue);
     };
 
-    // =========================================================================
-    // CONFIGURATION LOGIC (Super Synced)
-    // =========================================================================
-
-    // 1. Local State Update (For Fast Typing - No Backend Call)
+    // Configuration Update Handlers
     const handleConfigChangeLocal = (strategyName, configKey, value) => {
         onStrategiesChange(prevStrategies => ({
             ...prevStrategies,
@@ -188,19 +219,16 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         }));
     };
 
-    // 2. Immediate Backend Sync (For Dropdowns and Clicks)
     const handleConfigChange = (strategyName, configKey, value) => {
         const currentConfig = strategies?.[strategyName]?.config || {};
         const newConfig = { ...currentConfig, [configKey]: value };
-        onUpdateConfig(strategyName, newConfig); // Sends to Python
+        onUpdateConfig(strategyName, newConfig);
     };
 
-    // 3. Blur Backend Sync (When User Finishes Typing)
     const handleConfigBlur = (strategyName, configKey, value) => {
         handleConfigChange(strategyName, configKey, value);
     };
 
-    // Seconds Validation
     const handleSecondsBlur = (strategyName, inputValue) => {
         const currentConfig = strategies?.[strategyName]?.config || {};
         const minAllowed = timeframeToSeconds[currentConfig?.timeframe] || 300;
@@ -220,7 +248,6 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         handleConfigChange(strategyName, 'TIMEFRAME_SECONDS', val);
     };
 
-    // Days Toggle
     const toggleDay = (strategyName, dayIndex) => {
         const currentConfig = strategies?.[strategyName]?.config || {};
         const currentDays = currentConfig?.allowed_days || [];
@@ -233,7 +260,6 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         handleConfigChange(strategyName, 'allowed_days', newDays);
     };
 
-    // Killzones
     const addKillzone = (strategyName, currentZones) => {
         const newZones = [...(currentZones || []), ""]; 
         handleConfigChange(strategyName, 'killzones', newZones);
@@ -253,7 +279,6 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         if (type === 'start') newZones[index] = `${value}-${end}`;
         else newZones[index] = `${start}-${value}`;
         
-        // Local Only (Fast typing)
         handleConfigChangeLocal(strategyName, 'killzones', newZones);
     };
 
@@ -281,57 +306,90 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
         if (type === 'start') newZones[index] = `${formatted}-${end}`;
         else newZones[index] = `${start}-${formatted}`;
         
-        // Save format to backend
         handleConfigChange(strategyName, 'killzones', newZones);
     };
 
-    // Data Maps
     const strategyList = Object.entries(strategies || {});
 
     const timeframeOptions = [
-        { label: t('timeframe_m1'), value: 'M1' }, { label: t('timeframe_m5'), value: 'M5' },
-        { label: t('timeframe_m15'), value: 'M15' }, { label: t('timeframe_h1'), value: 'H1' },
-        { label: t('timeframe_h4'), value: 'H4' }, { label: t('timeframe_d1'), value: 'D1' },
-        { label: t('timeframe_w1'), value: 'W1' },
+        { label: t('timeframe_m1') || 'M1 - 1 Minute', value: 'M1' },
+        { label: t('timeframe_m5') || 'M5 - 5 Minutes', value: 'M5' },
+        { label: t('timeframe_m15') || 'M15 - 15 Minutes', value: 'M15' },
+        { label: t('timeframe_h1') || 'H1 - 1 Hour', value: 'H1' },
+        { label: t('timeframe_h4') || 'H4 - 4 Hours', value: 'H4' },
+        { label: t('timeframe_d1') || 'D1 - 1 Day', value: 'D1' },
+        { label: t('timeframe_w1') || 'W1 - 1 Week', value: 'W1' },
     ];
 
     const candleOptions = [
-        { label: t('candle_standard'), value: 'STANDARD' },
-        { label: t('candle_heikin'), value: 'HEIKIN_ASHI' },
+        { label: t('candle_standard') || 'Standard Candlesticks', value: 'STANDARD' },
+        { label: t('candle_heikin') || 'Heikin Ashi', value: 'HEIKIN_ASHI' },
     ];
 
     const riskModeOptions = [
-        { label: t('risk_fixed_usd'), value: 'fixed_usd' },
-        { label: t('risk_fixed_lot'), value: 'fixed_lot' },
-        { label: t('risk_percent'), value: 'percentage' },
+        { label: t('risk_fixed_usd') || 'Fixed Balance ($)', value: 'fixed_usd' },
+        { label: t('risk_fixed_lot') || 'Fixed Volume (Lot)', value: 'fixed_lot' },
+        { label: t('risk_percent') || 'Account Percentage (%)', value: 'percentage' },
     ];
 
     return (
-        <div className="h-full flex flex-col gap-5 font-sans">
-            
-            {/* Header Section */}
-            <div className="bg-[#121215] border border-white/5 rounded-2xl p-5 flex justify-between items-center shadow-lg relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none"></div>
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-12 h-12 bg-gradient-to-br from-[#1c1c20] to-[#000] border border-white/10 rounded-xl flex items-center justify-center shadow-inner">
-                        <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+        <div 
+            className="h-full flex flex-col gap-4 font-['Segoe_UI',-apple-system,BlinkMacSystemFont,sans-serif] select-none"
+            dir={isRtl ? 'rtl' : 'ltr'}
+        >
+            {/* Header Command Bar */}
+            <div className="bg-[#242424] border border-[#333333] rounded-[6px] p-4 flex justify-between items-center shadow-sm shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#1F1F1F] border border-[#333333] rounded-[4px] flex items-center justify-center text-[#107C41] shadow-sm">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
                     </div>
                     <div>
-                        <h1 className="text-white font-bold text-lg tracking-tight">{t('strategy_management')}</h1>
-                        <p className="text-xs text-zinc-500 font-medium">{t('strategy_config_subtitle')}</p>
+                        <h1 className="text-white font-semibold text-sm tracking-tight leading-tight">
+                            {t('strategy_management') || 'Strategy Manager'}
+                        </h1>
+                        <p className="text-[11px] text-[#A19F9D] mt-0.5">
+                            {t('strategy_config_subtitle') || 'Configure quantitative algorithmic rules and risk constraints.'}
+                        </p>
                     </div>
                 </div>
-                <button onClick={handleImport} disabled={isLoading} className="relative z-10 bg-white text-black hover:bg-zinc-200 px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xl active:scale-95 flex items-center gap-2">
-                    {isLoading ? (<svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : (<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>)}
-                    {t('import_strategy')}
+
+                <button 
+                    type="button"
+                    onClick={handleImport} 
+                    disabled={isLoading} 
+                    className="h-8 px-4 bg-[#107C41] hover:bg-[#0E6B37] active:bg-[#0C5B2F] text-white rounded-[4px] text-xs font-semibold border border-[#107C41] transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                    {isLoading ? (
+                        <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                    ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                    )}
+                    <span>{t('import_strategy') || 'Import Strategy'}</span>
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 custom-scroll space-y-4 pb-4">
+            {/* Strategy List Container */}
+            <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1">
                 {strategyList.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-zinc-600 border border-dashed border-zinc-800 rounded-2xl bg-[#0e0e11]">
-                        <p className="text-sm font-medium text-zinc-400">{t('no_strategies_found')}</p>
-                        <p className="text-xs opacity-50 mt-1">{t('no_strategies_desc')}</p>
+                    <div className="bg-[#242424] border border-[#333333] rounded-[6px] p-12 flex flex-col items-center justify-center text-center min-h-[300px]">
+                        <div className="w-12 h-12 bg-[#1F1F1F] border border-[#333333] rounded-[4px] flex items-center justify-center mb-3 text-[#797775]">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <p className="text-sm font-semibold text-white tracking-tight">
+                            {t('no_strategies_found') || 'No Strategies Active'}
+                        </p>
+                        <p className="text-xs text-[#A19F9D] mt-1 max-w-sm">
+                            {t('no_strategies_desc') || 'Click "Import Strategy" above to load python strategy packages into the execution environment.'}
+                        </p>
                     </div>
                 ) : (
                     strategyList.map(([name, data]) => {
@@ -346,70 +404,129 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                             return !blacklistParams.includes(normalizedKey);
                         });
 
-                        const paramCount = filteredParams.length;
-
                         return (
-                            <div key={name} className={`bg-[#121215] border transition-all duration-500 ease-out rounded-xl overflow-hidden ${isExpanded ? 'border-emerald-500/30 shadow-[0_4px_20px_-10px_rgba(16,185,129,0.15)]' : 'border-white/5 hover:border-white/10'}`}>
-                                
-                                <div onClick={() => toggleExpand(name)} className="p-4 flex items-center justify-between cursor-pointer select-none group relative z-20 bg-[#121215]">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-11 h-11 rounded-lg flex items-center justify-center font-mono font-bold text-sm shadow-inner transition-colors border ${isExpanded ? 'bg-emerald-500 text-black border-emerald-400 shadow-emerald-500/20' : 'bg-[#18181b] text-zinc-500 border-white/5 group-hover:border-white/10'}`}>
+                            <div 
+                                key={name} 
+                                className={`rounded-[6px] border transition-all duration-200 overflow-hidden ${
+                                    isExpanded 
+                                        ? 'bg-[#242424] border-[#3E3E3E] shadow-sm' 
+                                        : 'bg-[#202023] border-[#2D2D30] hover:border-[#38383B]'
+                                }`}
+                            >
+                                {/* Strategy Card Header */}
+                                <div 
+                                    onClick={() => toggleExpand(name)} 
+                                    className="p-3.5 flex items-center justify-between cursor-pointer select-none transition-colors hover:bg-white/[0.02]"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-9 h-9 rounded-[4px] flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-colors border ${
+                                            isExpanded 
+                                                ? 'bg-[#107C41] text-white border-[#107C41]' 
+                                                : 'bg-[#18181B] text-[#A19F9D] border-[#333333]'
+                                        }`}>
                                             {String(name).slice(0, 2).toUpperCase()}
                                         </div>
-                                        <div>
-                                            <h4 className={`text-sm font-bold transition-colors ${isExpanded ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'}`}>{name}</h4>
-                                            <div className="flex items-center gap-2 mt-1.5" dir="ltr">
-                                                {config?.symbol && (<span className="text-[10px] font-bold font-mono text-zinc-300 bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5">{config.symbol}</span>)}
-                                                <span className="text-[10px] font-bold font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/10">{config?.timeframe || 'M5'}</span>
+
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-xs font-semibold text-white tracking-tight truncate">
+                                                    {name}
+                                                </h4>
+                                                {config?.symbol && (
+                                                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-[2px] bg-[#18181B] border border-[#333333] text-[#CCCCCC]">
+                                                        {config.symbol}
+                                                    </span>
+                                                )}
+                                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-[2px] bg-[#0078D4]/10 border border-[#0078D4]/30 text-[#60A5FA]">
+                                                    {config?.timeframe || 'M5'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-[#797775]">
+                                                <span>MAGIC: <strong className="text-[#CCCCCC]">{config?.magic_number ?? '0'}</strong></span>
+                                                <span>•</span>
+                                                <span>PARAMS: <strong className="text-[#CCCCCC]">{filteredParams.length}</strong></span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={(e) => handleDelete(name, e)} className="p-2 rounded-lg text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button 
+                                            type="button"
+                                            onClick={(e) => handleDelete(name, e)} 
+                                            className="p-1.5 rounded-[4px] text-[#797775] hover:text-[#F87171] hover:bg-red-500/10 transition-colors"
+                                            title="Remove Strategy"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
                                         </button>
-                                        <div className={`p-2 rounded-lg text-zinc-500 transition-transform duration-500 ease-out ${isExpanded ? 'rotate-180 text-emerald-500' : ''}`}>
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+
+                                        <div className={`p-1.5 text-[#A19F9D] transform transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#107C41]' : ''}`}>
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className={`grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                {/* Expandable Body */}
+                                <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                                    isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                                }`}>
                                     <div className="overflow-hidden">
-                                        <div className="px-5 pb-6 border-t border-white/5 bg-[#0e0e11]">
+                                        <div className="p-4 border-t border-[#2D2D30] bg-[#1C1C1E] space-y-5">
                                             
-                                            {/* PARAMETERS SECTION */}
-                                            <div className="mt-5 mb-6">
-                                                <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>{t('algorithm_parameters')}</h5>
-                                                {paramCount === 0 ? (
-                                                    <div className="text-center text-zinc-600 py-4 text-xs italic bg-[#151518] rounded-xl border border-white/5">No configurable parameters detected.</div>
+                                            {/* 1. Algorithm Parameters */}
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#0078D4]" />
+                                                    <h5 className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D]">
+                                                        {t('algorithm_parameters') || 'Algorithm Parameters'}
+                                                    </h5>
+                                                </div>
+
+                                                {filteredParams.length === 0 ? (
+                                                    <div className="text-center text-[#52525B] py-3 text-xs italic bg-[#18181B] rounded-[4px] border border-[#2D2D30]">
+                                                        No dynamic parameters exposed by this strategy class.
+                                                    </div>
                                                 ) : (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                                                         {filteredParams.map(([key, val]) => {
-                                                            // Detect invalid states for visual feedback (Empty or Zero)
-                                                            const isInvalidParam = val === "" || val === undefined || val === null || val === 0 || val === "0" || (String(val).trim() !== "" && parseFloat(val) === 0);
+                                                            const isInvalid = val === "" || val === undefined || val === null || val === 0 || val === "0" || (String(val).trim() !== "" && parseFloat(val) === 0);
                                                             
                                                             return (
-                                                                <div key={key} className={`group relative bg-[#18181b] p-3 rounded-xl border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/50 ${isInvalidParam ? 'border-rose-500/50 shadow-[0_0_15px_-3px_rgba(244,63,94,0.15)] focus-within:!border-rose-500' : 'border-white/5 hover:border-white/10 focus-within:!border-blue-500/50'}`}>
-                                                                    <div className="flex justify-between items-start mb-1">
-                                                                        <label className={`text-[9px] uppercase font-bold tracking-wider truncate transition-colors ${isInvalidParam ? 'text-rose-500' : 'text-zinc-500 group-focus-within:text-blue-400'}`} title={key}>
+                                                                <div 
+                                                                    key={key} 
+                                                                    className={`bg-[#18181B] p-2.5 rounded-[4px] border transition-colors ${
+                                                                        isInvalid 
+                                                                            ? 'border-[#C42B1C]/60 bg-[#C42B1C]/5' 
+                                                                            : 'border-[#333333] focus-within:border-[#0078D4]'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <label className={`text-[9px] font-mono uppercase truncate ${
+                                                                            isInvalid ? 'text-[#F87171] font-semibold' : 'text-[#797775]'
+                                                                        }`} title={key}>
                                                                             {key}
                                                                         </label>
-                                                                        {isInvalidParam && (
-                                                                            <span className="text-[8px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse">
-                                                                                {t('invalid')}
+                                                                        {isInvalid && (
+                                                                            <span className="text-[8px] font-mono px-1 rounded bg-red-500/20 text-[#F87171]">
+                                                                                {t('invalid') || 'INVALID'}
                                                                             </span>
                                                                         )}
                                                                     </div>
+
                                                                     <input 
                                                                         type="text" 
                                                                         value={val !== undefined && val !== null ? val : ''}
                                                                         onChange={(e) => handleParamChange(name, key, e.target.value)}
                                                                         onBlur={(e) => handleParamBlur(name, key, e.target.value, typeof val)}
                                                                         dir="ltr"
-                                                                        className={`w-full bg-transparent border-none outline-none p-0 text-sm font-mono font-bold placeholder-zinc-700 transition-colors ${isInvalidParam ? 'text-rose-400' : 'text-zinc-200 focus:text-white'}`}
+                                                                        className={`w-full bg-transparent border-none outline-none text-xs font-mono font-semibold ${
+                                                                            isInvalid ? 'text-[#F87171]' : 'text-white'
+                                                                        }`}
                                                                     />
-                                                                    <div className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none ${isInvalidParam ? 'bg-rose-500/5' : 'bg-blue-500/5'}`}></div>
                                                                 </div>
                                                             );
                                                         })}
@@ -417,37 +534,48 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                                 )}
                                             </div>
 
-                                            {/* MARKET CONFIGURATION */}
-                                            <div className="mt-5 mb-6">
-                                                <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{t('market_configuration')}</h5>
-                                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                            {/* 2. Market Execution Parameters */}
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#107C41]" />
+                                                    <h5 className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D]">
+                                                        {t('market_configuration') || 'Market Configuration'}
+                                                    </h5>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                                    {/* Symbol */}
                                                     <div>
-                                                        <label className="text-[9px] text-zinc-500 font-bold mb-1.5 block">{t('symbol_label') || "SYMBOL"}</label>
+                                                        <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D] mb-1.5 block">
+                                                            {t('symbol_label') || "SYMBOL"}
+                                                        </label>
                                                         <input 
                                                             type="text" 
                                                             value={config?.symbol || ''} 
-                                                            // Removed .toUpperCase() to allow lower case letters like .o
                                                             onChange={(e) => handleConfigChangeLocal(name, 'symbol', e.target.value)} 
                                                             onBlur={(e) => handleConfigBlur(name, 'symbol', e.target.value)}
                                                             dir="ltr" 
-                                                            className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-white font-mono transition-all outline-none hover:border-white/10" 
+                                                            className="w-full h-8 bg-[#18181B] border border-[#333333] focus:border-[#107C41] rounded-[4px] px-2.5 text-xs text-white font-mono uppercase focus:outline-none transition-colors" 
                                                         />
                                                     </div>
                                                     
-                                                    {/* LEVERAGE FIELD */}
+                                                    {/* Leverage */}
                                                     <div>
-                                                        <label className="text-[9px] text-zinc-500 font-bold mb-1.5 block">{t('strategy_leverage')?.toUpperCase()}</label>
+                                                        <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D] mb-1.5 block">
+                                                            {t('strategy_leverage') || "LEVERAGE"}
+                                                        </label>
                                                         <input 
                                                             type="number" 
-                                                            placeholder={t('leverage_auto')} 
+                                                            placeholder={t('leverage_auto') || "Auto (Broker Default)"} 
                                                             value={config?.leverage !== undefined ? config.leverage : ''} 
                                                             onChange={(e) => handleConfigChangeLocal(name, 'leverage', e.target.value)} 
                                                             onBlur={(e) => handleConfigBlur(name, 'leverage', e.target.value ? parseInt(e.target.value) : '')} 
                                                             dir="ltr" 
-                                                            className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-indigo-400 font-mono transition-all outline-none hover:border-white/10 placeholder-zinc-700" 
+                                                            className="w-full h-8 bg-[#18181B] border border-[#333333] focus:border-[#107C41] rounded-[4px] px-2.5 text-xs text-[#60A5FA] font-mono placeholder-[#52525B] focus:outline-none transition-colors" 
                                                         />
                                                     </div>
 
+                                                    {/* Timeframe */}
                                                     <CustomSelect 
                                                         label={t('timeframe_label') || "TIMEFRAME"}
                                                         value={config?.timeframe || 'M5'}
@@ -463,125 +591,177 @@ const StrategyPanel = ({ strategies, onStrategiesChange, onUpdateConfig }) => {
                                                         }}
                                                     />
 
+                                                    {/* Magic Number */}
                                                     <div>
-                                                        <label className="text-[9px] text-zinc-500 font-bold mb-1.5 block">{t('magic_number')?.toUpperCase()}</label>
+                                                        <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D] mb-1.5 block">
+                                                            {t('magic_number') || "MAGIC NUMBER"}
+                                                        </label>
                                                         <input 
                                                             type="number" 
                                                             value={config?.magic_number ?? ''} 
                                                             onChange={(e) => handleConfigChangeLocal(name, 'magic_number', e.target.value)} 
                                                             onBlur={(e) => handleConfigBlur(name, 'magic_number', parseInt(e.target.value) || 0)}
                                                             dir="ltr" 
-                                                            className="w-full bg-[#18181b] border border-white/5 focus:border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-blue-400 font-mono transition-all outline-none hover:border-white/10" 
+                                                            className="w-full h-8 bg-[#18181B] border border-[#333333] focus:border-[#107C41] rounded-[4px] px-2.5 text-xs text-[#34D399] font-mono focus:outline-none transition-colors" 
                                                         />
                                                     </div>
                                                     
+                                                    {/* Candle Type */}
                                                     <CustomSelect 
-                                                        label={t('candle_type')?.toUpperCase()}
+                                                        label={t('candle_type') || "CANDLE TYPE"}
                                                         value={config?.candle_type || 'STANDARD'}
                                                         options={candleOptions}
                                                         onChange={(val) => handleConfigChange(name, 'candle_type', val)}
                                                     />
                                                 </div>
                                                 
-                                                <div className="mt-4">
-                                                    <label className="text-[9px] text-zinc-500 font-bold mb-2 block">{t('trading_days')?.toUpperCase()}</label>
+                                                {/* Allowed Trading Days */}
+                                                <div className="mt-3">
+                                                    <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D] mb-1.5 block">
+                                                        {t('trading_days') || "ALLOWED TRADING DAYS"}
+                                                    </label>
                                                     <div className="flex flex-wrap gap-1.5">
-                                                        {daysOfWeek.map(d => (
-                                                            <button key={d} onClick={() => toggleDay(name, d)} className={`flex-1 min-w-[40px] py-1.5 rounded text-[10px] border font-medium transition-all ${(config?.allowed_days || []).includes(d) ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-[#18181b] border-white/5 text-zinc-600 hover:bg-white/5'}`}>{dayLabels[d]}</button>
-                                                        ))}
+                                                        {daysOfWeek.map(d => {
+                                                            const isSelected = (config?.allowed_days || []).includes(d);
+                                                            return (
+                                                                <button 
+                                                                    key={d} 
+                                                                    type="button"
+                                                                    onClick={() => toggleDay(name, d)} 
+                                                                    className={`px-3 py-1 rounded-[4px] text-[10px] font-mono font-medium border transition-all cursor-pointer ${
+                                                                        isSelected 
+                                                                            ? 'bg-[#107C41] border-[#107C41] text-white font-semibold' 
+                                                                            : 'bg-[#18181B] border-[#333333] text-[#797775] hover:border-[#3E3E3E] hover:text-white'
+                                                                    }`}
+                                                                >
+                                                                    {dayLabels[d]}
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* RISK MANAGEMENT */}
-                                            <div className="mb-6">
-                                                <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                    {t('risk_management')}
-                                                </h5>
-                                                <div className="bg-[#151518] rounded-xl border border-white/5 flex items-center relative transition-colors hover:border-white/10 p-1 gap-1">
-                                                    <div className="w-[180px]">
-                                                        <CustomSelect 
-                                                            value={config?.risk_mode || 'fixed_usd'}
-                                                            options={riskModeOptions}
-                                                            onChange={(val) => handleConfigChange(name, 'risk_mode', val)}
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 relative h-full">
+                                            {/* 3. Risk Configuration */}
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E81123]" />
+                                                    <h5 className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D]">
+                                                        {t('risk_management') || 'Risk Management Model'}
+                                                    </h5>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#18181B] p-2.5 rounded-[4px] border border-[#333333]">
+                                                    <CustomSelect 
+                                                        value={config?.risk_mode || 'fixed_usd'}
+                                                        options={riskModeOptions}
+                                                        onChange={(val) => handleConfigChange(name, 'risk_mode', val)}
+                                                    />
+
+                                                    <div className="flex items-center bg-[#202023] border border-[#333333] rounded-[4px] px-3 h-8" dir="ltr">
                                                         <input 
                                                             type="text"
                                                             value={config?.risk_value !== undefined ? config.risk_value : ''} 
                                                             onChange={(e) => handleConfigChangeLocal(name, 'risk_value', e.target.value)}
                                                             onBlur={(e) => handleConfigBlur(name, 'risk_value', e.target.value ? parseFloat(e.target.value) : 0)}
-                                                            dir="ltr"
-                                                            className="w-full h-full bg-transparent border-none outline-none text-emerald-400 font-mono font-bold text-sm px-4 py-2 placeholder-zinc-700"
+                                                            className="w-full bg-transparent border-none outline-none text-[#34D399] font-mono font-semibold text-xs placeholder-[#52525B]"
                                                             placeholder="0.00"
                                                         />
-                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-600 pointer-events-none">
+                                                        <span className="text-[10px] font-mono text-[#797775] ml-2 shrink-0">
                                                             {config?.risk_mode === 'percentage' ? '%' : config?.risk_mode === 'fixed_lot' ? 'LOT' : 'USD'}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* TIME AND CYCLE SECTION */}
-                                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+                                            {/* 4. Killzones & Delay Checks */}
+                                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+                                                {/* Killzones */}
                                                 <div className="lg:col-span-8">
-                                                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>{t('active_trading_hours')}</h5>
-                                                    <div className="bg-[#151518] rounded-xl border border-white/5 p-3 space-y-2">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#FCE100]" />
+                                                        <h5 className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D]">
+                                                            {t('active_trading_hours') || 'Session Killzones (Trading Windows)'}
+                                                        </h5>
+                                                    </div>
+
+                                                    <div className="bg-[#18181B] rounded-[4px] border border-[#333333] p-2.5 space-y-2">
                                                         {killzones.map((zone, idx) => {
                                                             let [start, end] = zone.includes('-') ? zone.split('-') : ["", ""];
                                                             return (
-                                                                <div key={idx} className="flex items-center gap-2 group animate-fade-in-down">
-                                                                    <div className="flex-1 flex items-center gap-3 bg-black/30 p-1.5 rounded-lg border border-white/5 focus-within:border-indigo-500/50 transition-colors hover:border-white/10">
-                                                                        <div className="relative w-full">
-                                                                            <input 
-                                                                                type="text" placeholder="00:00" 
-                                                                                value={start} 
-                                                                                onChange={(e) => updateKillzoneTime(name, killzones, idx, 'start', e.target.value)} 
-                                                                                onBlur={(e) => handleTimeBlur(name, killzones, idx, 'start', e.target.value)} 
-                                                                                dir="ltr" 
-                                                                                className="w-full bg-transparent border-none text-center text-xs text-white font-mono focus:ring-0 focus:outline-none placeholder-zinc-700" 
-                                                                            />
-                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-zinc-600 font-bold pointer-events-none">{t('from')}</span>
-                                                                        </div>
-                                                                        <div className="w-px h-4 bg-white/10"></div>
-                                                                        <div className="relative w-full">
-                                                                            <input 
-                                                                                type="text" placeholder="00:00" 
-                                                                                value={end} 
-                                                                                onChange={(e) => updateKillzoneTime(name, killzones, idx, 'end', e.target.value)} 
-                                                                                onBlur={(e) => handleTimeBlur(name, killzones, idx, 'end', e.target.value)} 
-                                                                                dir="ltr" className="w-full bg-transparent border-none text-center text-xs text-white font-mono focus:ring-0 focus:outline-none placeholder-zinc-700" 
-                                                                            />
-                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[8px] text-zinc-600 font-bold pointer-events-none">{t('to')}</span>
-                                                                        </div>
+                                                                <div key={idx} className="flex items-center gap-2">
+                                                                    <div className="flex-1 flex items-center bg-[#202023] px-2 h-7 rounded-[4px] border border-[#333333]">
+                                                                        <span className="text-[9px] font-mono text-[#797775] mr-1.5">FROM:</span>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder="00:00" 
+                                                                            value={start} 
+                                                                            onChange={(e) => updateKillzoneTime(name, killzones, idx, 'start', e.target.value)} 
+                                                                            onBlur={(e) => handleTimeBlur(name, killzones, idx, 'start', e.target.value)} 
+                                                                            dir="ltr" 
+                                                                            className="w-14 bg-transparent border-none text-center text-xs text-white font-mono outline-none" 
+                                                                        />
+                                                                        <div className="w-px h-3 bg-[#3E3E3E] mx-2" />
+                                                                        <span className="text-[9px] font-mono text-[#797775] mr-1.5">TO:</span>
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder="00:00" 
+                                                                            value={end} 
+                                                                            onChange={(e) => updateKillzoneTime(name, killzones, idx, 'end', e.target.value)} 
+                                                                            onBlur={(e) => handleTimeBlur(name, killzones, idx, 'end', e.target.value)} 
+                                                                            dir="ltr" 
+                                                                            className="w-14 bg-transparent border-none text-center text-xs text-white font-mono outline-none" 
+                                                                        />
                                                                     </div>
-                                                                    <button onClick={() => removeKillzone(name, killzones, idx)} className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => removeKillzone(name, killzones, idx)} 
+                                                                        className="w-7 h-7 rounded-[4px] flex items-center justify-center text-[#797775] hover:bg-red-500/10 hover:text-[#F87171] transition-colors cursor-pointer"
+                                                                        title="Remove Window"
+                                                                    >
+                                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                        </svg>
                                                                     </button>
                                                                 </div>
                                                             );
                                                         })}
-                                                        <button onClick={() => addKillzone(name, killzones)} className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 border-dashed rounded-lg text-xs font-bold text-zinc-400 transition-colors flex items-center justify-center gap-2">
-                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                                                            {t('add_trading_window') || "Add Trading Window"}
+
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => addKillzone(name, killzones)} 
+                                                            className="w-full py-1.5 bg-[#202023] hover:bg-[#28282B] border border-dashed border-[#3E3E3E] rounded-[4px] text-xs font-semibold text-[#CCCCCC] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5 text-[#107C41]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                            </svg>
+                                                            <span>{t('add_trading_window') || "Add Trading Window"}</span>
                                                         </button>
                                                     </div>
                                                 </div>
-                                                
+
+                                                {/* Logic Check Interval */}
                                                 <div className="lg:col-span-4">
-                                                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>{t('delay_logic_checks') || "Delay Between Logic Checks"}</h5>
-                                                    <div className="bg-[#151518] rounded-xl border border-white/5 p-4 flex flex-col items-center justify-center h-[calc(100%-28px)]">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#0078D4]" />
+                                                        <h5 className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#A19F9D]">
+                                                            {t('delay_logic_checks') || "Tick Logic Interval"}
+                                                        </h5>
+                                                    </div>
+
+                                                    <div className="bg-[#18181B] rounded-[4px] border border-[#333333] p-3 flex flex-col items-center justify-center h-[calc(100%-24px)]">
                                                         <input 
                                                             type="number" 
                                                             value={config?.TIMEFRAME_SECONDS ?? 300} 
                                                             onChange={(e) => handleConfigChangeLocal(name, 'TIMEFRAME_SECONDS', e.target.value)}
                                                             onBlur={(e) => handleSecondsBlur(name, e.target.value)}
                                                             dir="ltr"
-                                                            className="w-full text-center bg-transparent border-none text-2xl font-bold text-orange-400 font-mono outline-none mb-1"
+                                                            className="w-full text-center bg-transparent border-none text-xl font-bold text-[#60A5FA] font-mono outline-none" 
                                                         />
-                                                        <span className="text-[10px] text-zinc-500 font-bold uppercase">{t('cycle_seconds') || "CYCLE SECONDS"}</span>
+                                                        <span className="text-[10px] font-mono text-[#797775] uppercase mt-1">
+                                                            {t('cycle_seconds') || "SECONDS / TICK"}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>

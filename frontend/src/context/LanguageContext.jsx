@@ -1,13 +1,19 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+/**
+ * Unified Bilingual Translations Dictionary (English & Persian)
+ * Synchronized with all Microsoft Fluent workstation components.
+ */
 const translations = {
     en: {
         // --- App & General ---
         page_title: "RoadMaps App | Dashboard",
         RoadMaps: "RoadMaps",
+        Roadmaps: "RoadMaps",
         App: "App",
         version: "v2.5.0",
         global: "Global",
+        symbol: "Symbol",
         symbol_label: "SYMBOL",
         live_market: "LIVE MARKET",
         Basic: "PRO EDITION",
@@ -15,6 +21,7 @@ const translations = {
         // --- Sidebar & Status ---
         dashboard: "Dashboard",
         overview: "Overview",
+        menu: "Navigation",
         strategy_manager: "Strategy Manager",
         education_tab: "AI Builder",
         analyze_chart: "Analyze Chart",
@@ -26,6 +33,7 @@ const translations = {
 
         // --- Dashboard Header ---
         Roadmaps_App: "RoadMaps App",
+        'RoadMaps App': "RoadMaps App",
         real_time_monitoring: "Real-time monitoring of performance & risk",
         active_strategies: "ACTIVE STRATEGIES",
         upcoming_news: "UPCOMING HIGH-IMPACT NEWS",
@@ -47,18 +55,24 @@ const translations = {
         system_online: "SYSTEM ONLINE",
         system_offline: "SYSTEM OFFLINE",
         processing_ticks: "Processing Ticks...",
+        start_engine: "Start Engine",
+        stop_engine: "Stop Engine",
         terminal_path: "Terminal Path",
         not_selected: "Not Selected",
+        browse: "Browse",
         browse_btn: "BROWSE",
         live_logs: "Live Logs",
         system_init: "System Initialized. Waiting for commands...",
 
-        // --- Strategy Panel ---
+        // --- Strategy Panel & Bot Settings ---
         strategy_management: "Strategy Management",
+        strategy_configurations: "Strategy Configurations",
         strategy_config_subtitle: "Configure trading algorithms & execution rules",
         import_strategy: "Import Strategy",
         no_strategies_found: "No active strategies found",
+        no_strategies_loaded: "No Strategies Loaded",
         no_strategies_desc: "Import a Python strategy file (.py) to get started",
+        import_strategy_hint: "Import or attach a quantitative Python strategy to configure parameters.",
         algorithm_parameters: "Algorithm Parameters",
         invalid: "INVALID",
         market_configuration: "Market Configuration",
@@ -68,8 +82,10 @@ const translations = {
         candle_heikin: "Heikin Ashi",
         strategy_leverage: "Symbol Leverage",
         leverage_auto: "Auto",
+        timeframe: "Timeframe",
         timeframe_label: "TIMEFRAME",
         trading_days: "Trading Days",
+        apply_changes: "Apply Changes",
         day_mon: "Mon", 
         day_tue: "Tue", 
         day_wed: "Wed", 
@@ -98,6 +114,8 @@ const translations = {
         // --- Risk Panel & News Filter ---
         global_risk: "Global Risk Management",
         global_risk_desc: "Auto-safety rules for all trades",
+        global_risk_protections: "Global Risk Protections",
+        system_broker_settings: "System & Broker Settings",
         margin_usage: "Max Margin Usage",
         margin_usage_desc: "Halts new positions if account margin exceeds this percentage. Crucial to prevent Prop Firm violations.",
         warmup_system: "Engine Warm-up Phase",
@@ -118,8 +136,6 @@ const translations = {
         saving: "Saving...",
         core_system_logic: "Core System & Logic Rules",
 
-
-
         // --- AI Builder Panel ---
         ai_builder_title: "AI Strategy Builder",
         ai_builder_subtitle: "Build trading bots without coding! Copy the template and paste it into AI.",
@@ -131,24 +147,26 @@ const translations = {
         step_3_desc: "Save the AI's code in a python file. Go to the Strategy Manager tab, import it, and watch it trade!",
         copy_code: "Copy Architecture",
         copied: "Copied successfully!",
-        
-        // --- News Add ---
-        system_broker_settings: "System & Broker Settings",
-        global_risk_protections: "Global Risk Protections",
 
         // --- Chart Analyzer ---
         chart_analysis: "Chart Analysis",
+        chart_analysis_header: "Chart Analysis",
         analyze_and_trade: "Analyze and Trade ...",
         upload_chart: "Upload a chart for analysis",
+        upload_chart_screenshots: "Upload chart screenshots for AI technical analysis",
+        vision_trade_engine: "Vision Trade Engine",
+        vision_engine_desc: "Upload a chart for deep LLM analysis and 1-click MT5 execution.",
         note_label: "Note:",
-        chart_tips: "The image must be legible; we recommend using a screenshot. Ensure the symbol and timeframe are clearly visible. Any issues may reduce the accuracy of the analysis.",
+        chart_tips: "The image must be legible; we recommend using a screenshot. Ensure the symbol and timeframe are clearly visible.",
         drag_drop_text: "Click to upload or drag image here",
         paste_text: "Or press Ctrl+V to paste",
+        paste_screenshot: "Or press Ctrl+V to paste screenshot",
         clear_image: "Clear Image",
         analyzing_chart: "Vision Engine is processing...",
         start_analysis: "Start Analysis",
-        waiting_chart: "Waiting for your chart",
-        waiting_chart_desc: "Upload a chart screenshot to extract trading structures and deploy them directly to your MT5 account.",
+        run_deep_analysis: "Run Deep Analysis",
+        awaiting_chart: "Awaiting Chart Data",
+        awaiting_chart_desc: "Upload a chart screenshot to extract trading structures and deploy them directly to your MT5 account.",
         ai_confidence: "AI CONFIDENCE",
         market_state: "MARKET STATE",
         trade_bias: "TRADE BIAS",
@@ -159,27 +177,23 @@ const translations = {
         price_action_logic: "PRICE ACTION LOGIC",
         indicators_confluence: "INDICATORS & CONFLUENCE",
         execution_setup: "EXECUTION SETUP",
+        risk_mode: "Risk Type",
+        risk_value: "Risk Value",
         deploy_mt5: "DEPLOY TO MT5",
+        deploy_to_mt5: "DEPLOY TO MT5",
         risk_warning: "Warning:",
         executing: "Executing...",
-        connection_error: "Connection to Python server failed. Please ensure Eel is running.",
-        chart_analysis_header: "Chart Analysis",
-        upload_chart_screenshots: "Upload chart screenshots for AI technical analysis",
-        vision_trade_engine: "Vision Trade Engine",
-        vision_engine_desc: "Upload a chart for deep LLM analysis and 1-click MT5 execution.",
-        run_deep_analysis: "Run Deep Analysis",
-        awaiting_chart: "Awaiting Chart Data",
-        awaiting_chart_desc: "Upload a screenshot to extract trading structures and deploy them directly to your MT5 account.",
-        paste_screenshot: "Or press Ctrl+V to paste screenshot",
-        deploy_to_mt5: "DEPLOY TO MT5",
+        connection_error: "Connection to Python server failed. Please ensure Eel is running."
     },
     fa: {
         // --- App & General ---
         page_title: "پنل مدیریت | RoadMaps App",
         RoadMaps: "RoadMaps",
+        Roadmaps: "RoadMaps",
         App: "App",
         version: "نسخه 2.5.0",
         global: "جهانی",
+        symbol: "نماد",
         symbol_label: "نماد",
         live_market: "بازار زنده",
         Basic: "PRO EDITION",
@@ -187,6 +201,7 @@ const translations = {
         // --- Sidebar & Status ---
         dashboard: "داشبورد اصلی",
         overview: "مرور کلی",
+        menu: "ناوبری سیستم",
         strategy_manager: "مدیریت استراتژی",
         education_tab: "ربات‌سازی با هوش مصنوعی",
         analyze_chart: "تحلیل چارت",
@@ -198,6 +213,7 @@ const translations = {
 
         // --- Dashboard Header ---
         Roadmaps_App: "RoadMaps App",
+        'RoadMaps App': "RoadMaps App",
         real_time_monitoring: "داشبورد نظارت و عملکرد",
         active_strategies: "استراتژی‌های فعال",
         upcoming_news: "خبر مهم اقتصادی پیش‌رو",
@@ -219,18 +235,24 @@ const translations = {
         system_online: "سیستم آنلاین",
         system_offline: "سیستم آفلاین",
         processing_ticks: "پردازش تیک‌ها...",
+        start_engine: "روشن کردن موتور",
+        stop_engine: "خاموش کردن موتور",
         terminal_path: "مسیر ترمینال",
         not_selected: "انتخاب نشده",
+        browse: "انتخاب مسیر",
         browse_btn: "انتخاب مسیر",
         live_logs: "لاگ‌های زنده",
         system_init: "سیستم مهیا شد. منتظر دریافت دستورات...",
 
-        // --- Strategy Panel ---
+        // --- Strategy Panel & Bot Settings ---
         strategy_management: "مدیریت استراتژی",
+        strategy_configurations: "تنظیمات استراتژی‌ها",
         strategy_config_subtitle: "پیکربندی الگوریتم‌های معاملاتی و قوانین اجرا",
         import_strategy: "افزودن استراتژی",
         no_strategies_found: "هیچ استراتژی فعالی یافت نشد",
+        no_strategies_loaded: "هیچ استراتژی لود نشده است",
         no_strategies_desc: "یک فایل استراتژی پایتون (.py) را برای شروع وارد کنید",
+        import_strategy_hint: "یک فایل پایتونی وارد کنید تا متغیرها و پارامترهای آن در دسترس قرار گیرند.",
         algorithm_parameters: "پارامترهای الگوریتم",
         invalid: "نامعتبر",
         market_configuration: "پیکربندی بازار",
@@ -240,8 +262,10 @@ const translations = {
         candle_heikin: "هایکین آشی",
         strategy_leverage: "لوریج نماد",
         leverage_auto: "خودکار",
+        timeframe: "تایم فریم",
         timeframe_label: "تایم فریم",
         trading_days: "روز‌های معاملاتی",
+        apply_changes: "اعمال تغییرات",
         day_mon: "دوشنبه", 
         day_tue: "سه‌شنبه", 
         day_wed: "چهارشنبه", 
@@ -270,6 +294,8 @@ const translations = {
         // --- Risk Panel & News Filter ---
         global_risk: "مدیریت ریسک سراسری",
         global_risk_desc: "قوانین امنیتی خودکار برای تمامی معاملات",
+        global_risk_protections: "مدیریت ریسک سراسری",
+        system_broker_settings: "مدیریت سیستم",
         margin_usage: "حداکثر مارجین درگیر",
         margin_usage_desc: "در صورت عبور مارجین از این درصد، سیستم از باز کردن پوزیشن جدید جلوگیری می‌کند. بسیار مهم برای اکانت‌های پراپ‌فرم.",
         warmup_system: "مرحله گرم‌سازی موتور",
@@ -296,29 +322,31 @@ const translations = {
         step_1_title: "۱. کپی کردن قالب",
         step_1_desc: "روی دکمه کپی کلیک کنید تا معماری استاندارد ربات در حافظه شما ذخیره شود.",
         step_2_title: "۲. صحبت با هوش مصنوعی",
-        step_2_desc: "هوش مصنوعی را باز کنید. قالب را پیست کنید و به زبان ساده بگویید: «با این قالب استراتژی بنویس که اگر RSI زیر 30 رفت بخر...»",
+        step_2_desc: "هوش مصنوعی را باز کنید. قالب را پیست کنید و بگویید: «با این قالب استراتژی بنویس که اگر RSI زیر 30 رفت بخر...»",
         step_3_title: "۳. درون‌ریزی و اجرا",
-        step_3_desc: "کدی که هوش مصنوعی داد را در یک فایل پایتونی ذخیره کنید. به تب مدیریت استراتژی بروید، آن را وارد نرم افزار (Import) کنید و تمام!",
+        step_3_desc: "کدی که هوش مصنوعی داد را در یک فایل پایتونی ذخیره کنید. به تب مدیریت استراتژی بروید، آن را وارد نرم افزار کنید و تمام!",
         copy_code: "کپی کردن معماری",
         copied: "با موفقیت کپی شد!",
-        
-        // --- News Add ---
-        system_broker_settings: "مدیریت سیستم",
-        global_risk_protections: "مدیریت ریسک سراسری",
 
         // --- Chart Analyzer ---
         chart_analysis: "تحلیل چارت",
+        chart_analysis_header: "تحلیل چارت",
         analyze_and_trade: "تحلیل کن و معامله بزن",
         upload_chart: "بارگذاری نمودار برای تحلیل",
+        upload_chart_screenshots: "بارگذاری تصاویر نمودار برای تحلیل تکنیکال توسط هوش مصنوعی",
+        vision_trade_engine: "موتور بینایی معاملاتی",
+        vision_engine_desc: "چارت خود را آپلود کنید تا هوش مصنوعی نقاط ورود را استخراج کرده و روی متاتریدر اجرا کند.",
         note_label: "نکته:",
-        chart_tips: "توجه داشته باشید که تصویر باید خوانا باشد؛ توصیه می‌کنیم از اسکرین‌شات استفاده کنید. اطمینان حاصل کنید که نماد (Symbol) و بازه زمانی (Timeframe) به‌وضوح قابل مشاهده هستند؛ هرگونه نقص در این موارد ممکن است دقت تحلیل را کاهش دهد.",
+        chart_tips: "تصویر باید خوانا باشد؛ توصیه می‌کنیم از اسکرین‌شات استفاده کنید. نماد و بازه زمانی باید کاملاً مشخص باشند.",
         drag_drop_text: "برای آپلود کلیک کن یا تصویر رو بکش اینجا",
         paste_text: "یا برای پیست کردن کلیدهای Ctrl+V رو بزن",
+        paste_screenshot: "یا کلیدهای Ctrl+V را فشار دهید تا عکس مستقیماً پیست شود",
         clear_image: "پاک کردن تصویر",
         analyzing_chart: "در حال تحلیل نمودار...",
         start_analysis: "شروع تحلیل دقیق",
-        waiting_chart: "منتظر چارت شما",
-        waiting_chart_desc: "اسکرین‌شات چارت رو آپلود کن تا ساختار بازار بررسی بشه و بتونی سیگنال رو مستقیم روی متاتریدرت اجرا کنی.",
+        run_deep_analysis: "شروع تحلیل عمیق چارت",
+        awaiting_chart: "منتظر دریافت چارت",
+        awaiting_chart_desc: "یک اسکرین‌شات از چارت آپلود کنید تا ساختار بازار و استاپ‌لاس استاندارد استخراج شود.",
         ai_confidence: "اطمینان هوش مصنوعی",
         market_state: "وضعیت بازار",
         trade_bias: "جهت معامله",
@@ -329,31 +357,30 @@ const translations = {
         price_action_logic: "منطق پرایس اکشن",
         indicators_confluence: "اندیکاتورها و تاییدیه‌ها",
         execution_setup: "تنظیمات اجرا",
-        deploy_mt5: "اجرای معامله در MT5",
+        risk_mode: "نوع ریسک",
+        risk_value: "مقدار ریسک",
+        deploy_mt5: "ارسال به MT5",
+        deploy_to_mt5: "ارسال مستقیم به MT5",
         risk_warning: "هشدار:",
         executing: "در حال اجرا...",
-        connection_error: "ارتباط با سرور پایتون برقرار نشد. لطفا بررسی کنید که Eel در حال اجرا باشد.",
-        chart_analysis_header: "تحلیل چارت",
-        upload_chart_screenshots: "بارگذاری تصاویر نمودار برای تحلیل تکنیکال توسط هوش مصنوعی",
-        vision_trade_engine: "موتور بینایی معاملاتی",
-        vision_engine_desc: "چارت خود را آپلود کنید تا هوش مصنوعی نقاط ورود را استخراج کرده و روی متاتریدر اجرا کند.",
-        run_deep_analysis: "شروع تحلیل عمیق چارت",
-        awaiting_chart: "منتظر دریافت چارت",
-        awaiting_chart_desc: "یک اسکرین‌شات از چارت آپلود کنید تا ساختار بازار و استاپ‌لاس استاندارد استخراج شود.",
-        paste_screenshot: "یا کلیدهای Ctrl+V را فشار دهید تا عکس مستقیماً پیست شود",
-        deploy_to_mt5: "ارسال مستقیم به MT5",
+        connection_error: "ارتباط با سرور پایتون برقرار نشد. لطفا بررسی کنید که Eel در حال اجرا باشد."
     }
 };
+
+import safeStorage from '../lib/safeStorage';
 
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-    const [lang, setLang] = useState(localStorage.getItem('app_lang') || 'fa');
+    const [lang, setLang] = useState(() => {
+        const savedLang = safeStorage.getItem('app_lang');
+        return savedLang === 'en' || savedLang === 'fa' ? savedLang : 'fa';
+    });
 
     const toggleLanguage = () => {
         const newLang = lang === 'fa' ? 'en' : 'fa';
         setLang(newLang);
-        localStorage.setItem('app_lang', newLang);
+        safeStorage.setItem('app_lang', newLang);
     };
 
     useEffect(() => {
@@ -361,7 +388,11 @@ export const LanguageProvider = ({ children }) => {
         document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
     }, [lang]);
 
-    const t = (key) => translations[lang][key] || key;
+    // Resilient fallback chain: Current Lang -> English Fallback -> Raw Key String
+    const t = (key) => {
+        if (!key) return '';
+        return translations[lang]?.[key] || translations['en']?.[key] || key;
+    };
 
     return (
         <LanguageContext.Provider value={{ lang, toggleLanguage, t }}>

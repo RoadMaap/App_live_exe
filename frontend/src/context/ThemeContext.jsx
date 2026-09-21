@@ -1,41 +1,59 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import safeStorage from '../lib/safeStorage';
 
-// ایجاد کانتکست برای مدیریت تم (دارک/لایت)
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    // خواندن تم قبلی از حافظه مرورگر یا استفاده از حالت دارک به عنوان پیش‌فرض
-    const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'dark');
+    const [theme, setTheme] = useState(() => {
+        const savedTheme = safeStorage.getItem('app_theme');
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+            return savedTheme;
+        }
+
+        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            return 'light';
+        }
+
+        return 'dark';
+    });
 
     useEffect(() => {
-        // اعمال کلاس 'dark' روی کل داکیومنت HTML برای Tailwind CSS
+        const root = document.documentElement;
+
         if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
+            root.classList.add('dark');
+            root.style.colorScheme = 'dark';
         } else {
-            document.documentElement.classList.remove('dark');
+            root.classList.remove('dark');
+            root.style.colorScheme = 'light';
         }
-        // ذخیره تم در حافظه
-        localStorage.setItem('app_theme', theme);
+
+        safeStorage.setItem('app_theme', theme);
     }, [theme]);
 
     const toggleTheme = () => {
-        setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+        if (typeof document !== 'undefined') {
+            document.documentElement.classList.add('theme-transitioning');
+            window.setTimeout(() => {
+                document.documentElement.classList.remove('theme-transitioning');
+            }, 130);
+        }
+        setTheme(prevTheme => (prevTheme === 'dark' ? 'light' : 'dark'));
     };
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
             {children}
         </ThemeContext.Provider>
     );
 };
 
-// هوک کاستوم برای استفاده راحت در داشبورد
+// Custom consumer hook with crash-resilient default fallback
 export const useTheme = () => {
     const context = useContext(ThemeContext);
     if (!context) {
-        // این هشدار جلوی کرش کردن را می‌گیرد و مقدار پیش‌فرض می‌دهد
-        console.warn("useTheme must be used within a ThemeProvider");
-        return { theme: 'dark', toggleTheme: () => {} };
+        console.warn("useTheme invoked outside of ThemeProvider scope. Falling back to static dark context.");
+        return { theme: 'dark', toggleTheme: () => {}, isDark: true };
     }
     return context;
 };

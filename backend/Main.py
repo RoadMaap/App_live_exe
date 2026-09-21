@@ -85,6 +85,13 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"⚠️ Could not start News Service: {e}")
 
+    try:
+        from updater.app_updater import AppUpdater
+        startup_status = AppUpdater.run_startup_check()
+        print(f"📦 Update status: {startup_status.get('status')} | {startup_status.get('message')}")
+    except Exception as exc:
+        print(f"⚠️ Update check failed at startup: {exc}")
+
     # If the app was started with --auth flag, run the desktop web auth flow first
     if '--auth' in sys.argv or '--login' in sys.argv:
         print("🔐 Running desktop web auth flow...")

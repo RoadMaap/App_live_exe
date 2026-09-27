@@ -7,9 +7,9 @@ import RiskPanel from './RiskPanel';
 import EnginePanel from './EnginePanel';
 import StrategyPanel from './StrategyPanel';
 import EducationPanel from './EducationPanel';
-import ChartAnalyzer from './ChartAnalyzer'; /* 👈 مسیر ایمپورت تصحیح شد تا صفحه سفید نشود */
+import ChartAnalyzer from './ChartAnalyzer';
 
-const Dashboard = () => {
+const Dashboard = ({ updateInfo, onStartOptionalUpdate }) => {
     const { t, toggleLanguage, lang } = useLanguage();
     
     // --- Refs ---
@@ -22,6 +22,7 @@ const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [strategies, setStrategies] = useState({});
     const [userName, setUserName] = useState('');
+    const [showOptionalModal, setShowOptionalModal] = useState(false);
     
     // News Ticker State
     const [nextNews, setNextNews] = useState(null);
@@ -199,6 +200,20 @@ const Dashboard = () => {
                                     {Object.keys(strategies || {}).length.toString().padStart(2, '0')}
                                 </span>
                             </div>
+
+                            {updateInfo && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOptionalModal(true)}
+                                    className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl border border-blue-500/30 bg-[#121215] px-4 py-2.5 text-sm font-semibold text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)] transition-all hover:border-blue-400/50 hover:text-white hover:shadow-[0_0_25px_rgba(59,130,246,0.3)] active:scale-95"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-cyan-600/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5m-5 5V3" />
+                                    </svg>
+                                    <span className="relative z-10">{t('update_available')}</span>
+                                </button>
+                            )}
                             
                             <button 
                                 onClick={toggleLanguage} 
@@ -272,7 +287,6 @@ const Dashboard = () => {
                                 {/* Control Panels */}
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-6 h-full min-h-[500px]">
                                     <div className="lg:col-span-8 flex flex-col gap-6 h-full">
-                                        {/* اخبار دقیقاً از طریق پاس دادن nextNews به داخل پنل ریسک در جای خودش نمایش داده می‌شود */}
                                         <RiskPanel initialData={initialData} nextNews={nextNews} />
                                     </div>
                                     
@@ -312,6 +326,87 @@ const Dashboard = () => {
                     </div>
                 </main>
             </div>
+
+            {/* --- PREMIUM OPTIONAL UPDATE MODAL --- */}
+            {showOptionalModal && updateInfo && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5 backdrop-blur-md transition-all duration-300"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) setShowOptionalModal(false);
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="optional-update-title"
+                        className="relative w-full max-w-lg animate-in zoom-in-95 duration-300 overflow-hidden rounded-3xl border border-white/10 bg-[#121215]/95 p-8 shadow-[0_0_60px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all"
+                    >
+                        {/* Background light effects inside modal */}
+                        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-600/10 blur-[80px]"></div>
+                        <div className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-cyan-600/10 blur-[80px]"></div>
+                        
+                        {/* Top subtle highlight line */}
+                        <div className="absolute left-0 right-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
+
+                        <div className="relative z-10">
+                            {/* Modal Header: Icon + Title */}
+                            <div className="flex items-center gap-5">
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 shadow-[0_0_30px_rgba(59,130,246,0.15)] relative">
+                                    <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse"></div>
+                                    <svg className="relative z-10 h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]">
+                                        {t('update_version')} {updateInfo.latest_version}
+                                    </p>
+                                    <h2 id="optional-update-title" className="mt-1 text-2xl font-extrabold text-white tracking-tight">
+                                        {t('update_modal_title')}
+                                    </h2>
+                                </div>
+                            </div>
+
+                            <p className="mt-5 text-sm leading-relaxed text-zinc-400 font-medium">
+                                {t('update_modal_description')}
+                            </p>
+
+                            {/* Glassmorphism Changelog Box */}
+                            <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/5 bg-[#09090b]/80 shadow-inner">
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-cyan-500 opacity-50"></div>
+                                <div className="max-h-56 overflow-y-auto whitespace-pre-wrap p-5 text-sm leading-relaxed text-zinc-300 custom-scroll">
+                                    {updateInfo.changelog || t('update_changelog_fallback')}
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="mt-8 flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOptionalModal(false)}
+                                    className="rounded-xl border border-white/5 bg-transparent px-5 py-3 text-sm font-semibold text-zinc-400 transition-all duration-200 hover:bg-white/5 hover:text-white active:scale-95"
+                                >
+                                    {t('update_remind_later')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowOptionalModal(false);
+                                        onStartOptionalUpdate?.();
+                                    }}
+                                    className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] active:scale-95 flex items-center gap-2 group"
+                                >
+                                    <span>{t('update_now')}</span>
+                                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            )}
         </div>
     );
 };

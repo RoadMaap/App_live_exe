@@ -5,13 +5,18 @@ import shutil
 import tempfile
 import time
 import urllib.request
+import threading
+import subprocess
+import sys
 from pathlib import Path
 
+import eel
 
 APP_VERSION = "0.0.0"
+# برای بیلد نهایی این آدرس را به آدرس واقعی API سرورت تغییر بده
 RELEASE_API_URL = os.environ.get(
     "ROADMAPS_APP_RELEASE_API_URL",
-    "https://roadmaps.ir/api/v1/roadmapsapp/releases/latest/",
+    "http://127.0.0.1:8000/latest.json"
 )
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -144,7 +149,28 @@ class AppUpdater:
     def _download_file(url, out_path):
         request = urllib.request.Request(url, headers={'User-Agent': 'RoadMaps-App-Updater/1.0'})
         with urllib.request.urlopen(request, timeout=60) as response, open(out_path, 'wb') as handle:
-            shutil.copyfileobj(response, handle)
+            content_length = response.headers.get('Content-Length')
+            total_bytes = int(content_length) if content_length else 0
+            downloaded_bytes = 0
+            block_size = 8192
+
+            def report_progress(percent):
+                try:
+                    eel.update_download_progress(percent)
+                except Exception:
+                    pass
+
+            report_progress(0)
+            while True:
+                chunk = response.read(block_size)
+                if not chunk:
+                    break
+                handle.write(chunk)
+                downloaded_bytes += len(chunk)
+                if total_bytes:
+                    report_progress(min(100, int(downloaded_bytes * 100 / total_bytes)))
+
+            report_progress(100)
 
     @staticmethod
     def _compute_sha256(file_path):
@@ -153,6 +179,49 @@ class AppUpdater:
             for chunk in iter(lambda: handle.read(65536), b''):
                 digest.update(chunk)
         return digest.hexdigest()
+
+    @staticmethod
+    def _apply_update_and_restart(new_exe_path):
+        """
+        اجرای پروسه جایگزینی فایل اجرایی ویندوز به صورت کاملا نامرئی.
+        """
+        # مکث کوتاه برای اطمینان از رسیدن پیام success به فرانت‌اند
+        time.sleep(1.5)
+        
+        # اگر برنامه کامپایل شده و در حال اجرا به عنوان یک فایل exe است
+        if getattr(sys, 'frozen', False):
+            current_exe = os.path.abspath(sys.executable)
+            current_pid = os.getpid()
+            
+            bat_path = os.path.join(tempfile.gettempdir(), "roadmaps_updater.bat")
+            
+            # اسکریپت جایگزینی: بستن نرم‌افزار -> کپی فایل جدید -> اجرای نسخه جدید -> حذف خود اسکریپت
+            bat_content = f"""@echo off
+:: Kill the current application to release the file lock
+taskkill /F /PID {current_pid} > NUL 2>&1
+timeout /t 2 /nobreak > NUL
+
+:: Overwrite the old executable with the newly downloaded one
+copy /Y "{new_exe_path}" "{current_exe}"
+
+:: Launch the updated application
+start "" "{current_exe}"
+
+:: Self-destruct this batch file
+del "%~f0"
+"""
+            with open(bat_path, "w", encoding="utf-8") as f:
+                f.write(bat_content)
+            
+            # اجرای اسکریپت bat به صورت کاملا پنهان (بدون باز شدن پنجره سیاه CMD)
+            CREATE_NO_WINDOW = 0x08000000
+            subprocess.Popen(bat_path, creationflags=CREATE_NO_WINDOW, shell=True)
+            
+        else:
+            # اگر در محیط توسعه (Development) و در حال اجرای پایتون هستیم
+            print(f"\n✅ Update downloaded successfully to: {new_exe_path}")
+            print("⚠️ Running in Development Mode. Auto-restart is bypassed. Restart the script manually.")
+            os._exit(0)
 
     @staticmethod
     def download_and_install_update():
@@ -223,15 +292,19 @@ class AppUpdater:
                 'status': 'installed',
             })
 
+            # 🔥 استارت کردن پروسه جایگزینی فایل و ری‌استارت برنامه در یک ترد مجزا
+            threading.Thread(target=AppUpdater._apply_update_and_restart, args=(str(target_version_path),), daemon=True).start()
+
             return {
                 'success': True,
-                'message': f'Update to version {latest_version} installed successfully.',
+                'message': f'Update to version {latest_version} installed successfully. Restarting...',
                 'has_update': True,
                 'is_force_update': status.get('is_force_update', False),
                 'update_type': status.get('update_type', 'optional'),
                 'version': latest_version,
                 'install_path': str(target_version_path),
             }
+            
         except Exception as exc:
             if os.path.exists(temp_path):
                 os.remove(temp_path)

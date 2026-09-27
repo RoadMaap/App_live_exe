@@ -1,160 +1,95 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LanguageProvider } from './context/LanguageContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-
-function UpdateModal({ updateInfo, onConfirm, onLater }) {
-  const isForce = Boolean(updateInfo?.is_force_update);
-
-  return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(6, 10, 18, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: 20,
-    }}>
-      <div style={{
-        width: 'min(540px, 100%)',
-        background: '#111827',
-        border: '1px solid rgba(148, 163, 184, 0.25)',
-        borderRadius: 18,
-        padding: 28,
-        boxShadow: '0 20px 70px rgba(0,0,0,0.45)',
-        color: '#f8fafc',
-      }}>
-        <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 12 }}>
-          {isForce ? 'Required update' : 'New version available'}
-        </div>
-
-        <div style={{ color: '#cbd5e1', marginBottom: 12 }}>
-          {isForce
-            ? 'This update is required to continue using RoadMaps safely.'
-            : 'A newer version of RoadMaps is available.'}
-        </div>
-
-        <div style={{ marginBottom: 10, color: '#dbeafe' }}>
-          <strong>Current:</strong> {updateInfo?.current_version || 'unknown'}
-        </div>
-        <div style={{ marginBottom: 18, color: '#dbeafe' }}>
-          <strong>Latest:</strong> {updateInfo?.latest_version || 'unknown'}
-        </div>
-
-        <div style={{
-          background: '#0f172a',
-          border: '1px solid rgba(148,163,184,0.25)',
-          borderRadius: 12,
-          padding: 14,
-          marginBottom: 22,
-          color: '#e2e8f0',
-          whiteSpace: 'pre-wrap',
-          lineHeight: 1.5,
-          minHeight: 90,
-        }}>
-          {updateInfo?.changelog || 'Improved stability and security updates.'}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-          {!isForce && (
-            <button
-              onClick={onLater}
-              style={{
-                background: '#334155',
-                color: '#f8fafc',
-                border: 'none',
-                padding: '10px 18px',
-                borderRadius: 10,
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              Later
-            </button>
-          )}
-
-          <button
-            onClick={onConfirm}
-            style={{
-              background: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              padding: '10px 18px',
-              borderRadius: 10,
-              cursor: 'pointer',
-              fontWeight: 700,
-            }}
-          >
-            {isForce ? 'Update now' : 'Update now'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import UpdateProgressScreen from './components/UpdateProgressScreen';
+import { useLanguage } from './context/LanguageContext';
 
 function MainApp() {
+  const { t } = useLanguage();
   const [view, setView] = useState('login');
   const [updateInfo, setUpdateInfo] = useState(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadMessage, setDownloadMessage] = useState('Downloading the latest version...');
+  const activeDownloadRef = useRef(false);
+  const forcedUpdateStartedRef = useRef(null);
 
   useEffect(() => {
     if (!window.eel) return;
+    window.eel.expose((percent) => setDownloadProgress(percent), 'update_download_progress');
 
     const checkUpdate = async () => {
+      if (activeDownloadRef.current) return;
       try {
         const result = await window.eel.check_for_app_update()();
-        if (result && result.has_update) {
-          setUpdateInfo(result);
-        }
+        setUpdateInfo(result?.has_update ? result : null);
       } catch (error) {
         console.error('Update check failed:', error);
       }
     };
 
     checkUpdate();
+    const pollingId = window.setInterval(checkUpdate, 3600000);
+    return () => window.clearInterval(pollingId);
   }, []);
 
   const handleUpdateInstall = async () => {
     if (!window.eel) return;
 
+    if (activeDownloadRef.current) return;
+    activeDownloadRef.current = true;
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setDownloadMessage('Downloading the latest version...');
     try {
       const result = await window.eel.download_and_install_update()();
       if (result && result.success) {
-        setUpdateInfo(null);
-        window.location.reload();
+        setDownloadProgress(100);
+        setDownloadMessage('Update complete. Restarting application...');
+        setTimeout(() => {
+          window.close();
+        }, 2000);
         return;
       }
 
-      if (result && result.message) {
-        alert(result.message);
-      }
+      activeDownloadRef.current = false;
+      setIsDownloading(false);
+      setDownloadMessage('update_install_failed');
+      alert(t('update_install_failed'));
     } catch (error) {
       console.error('Install update failed:', error);
-      alert('Update failed. Please try again later.');
+      activeDownloadRef.current = false;
+      setIsDownloading(false);
+      setDownloadMessage('update_install_failed');
+      alert(t('update_install_failed'));
     }
   };
 
-  const handleLater = () => {
-    setUpdateInfo(null);
-  };
+  const startOptionalUpdate = () => handleUpdateInstall();
 
-  if (updateInfo && updateInfo.has_update) {
-    return (
-      <UpdateModal
-        updateInfo={updateInfo}
-        onConfirm={handleUpdateInstall}
-        onLater={handleLater}
-      />
-    );
+  useEffect(() => {
+    const version = updateInfo?.is_force_update ? updateInfo.latest_version : null;
+    if (!version || isDownloading || forcedUpdateStartedRef.current === version) return;
+
+    forcedUpdateStartedRef.current = version;
+    handleUpdateInstall();
+  }, [updateInfo, isDownloading, handleUpdateInstall]);
+
+  if (updateInfo?.is_force_update === true || isDownloading) {
+    return <UpdateProgressScreen progress={downloadProgress} message={downloadMessage} />;
   }
 
   if (view === 'login') {
     return <Login onLoginSuccess={() => setView('dashboard')} />;
   }
 
-  return <Dashboard />;
+  return (
+    <Dashboard
+      updateInfo={updateInfo}
+      onStartOptionalUpdate={startOptionalUpdate}
+    />
+  );
 }
 
 export default function App() {

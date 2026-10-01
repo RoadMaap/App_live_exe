@@ -1,11 +1,28 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { callOptionalEel } from '../services/eelApi';
 
 const Login = ({ onLoginSuccess }) => {
     const { t, lang, toggleLanguage } = useLanguage();
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
+    const [appVersion, setAppVersion] = useState('0.0.0');
+
+    useEffect(() => {
+        let isMounted = true;
+
+        callOptionalEel('get_app_version').then((versionInfo) => {
+            const version = versionInfo?.version;
+            if (isMounted && typeof version === 'string' && version.trim()) {
+                setAppVersion(version.trim());
+            }
+        });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const handleWebLogin = async () => {
         setIsLoading(true);
@@ -81,6 +98,12 @@ const Login = ({ onLoginSuccess }) => {
                     <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
                         {t('Roadmaps')} <span className="text-emerald-500 font-light">App</span>
                     </h1>
+                    <span
+                        className="mb-5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[10px] font-medium text-zinc-400"
+                        aria-label={lang === 'fa' ? `نسخه برنامه ${appVersion}` : `App version ${appVersion}`}
+                    >
+                        v{appVersion}
+                    </span>
                     <p className="text-sm text-zinc-400 mb-10 max-w-[280px] leading-relaxed">
                         {lang === 'fa' 
                             ? "سلام خوش آمدید! برای ادامه دکمه زیر را بزنید و مراحل را در مرورگر سیستم خود کامل کنید."

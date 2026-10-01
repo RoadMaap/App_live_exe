@@ -9,14 +9,12 @@ import threading
 import subprocess
 import sys
 from pathlib import Path
-
 import eel
 
 APP_VERSION = "0.0.0"
-# برای بیلد نهایی این آدرس را به آدرس واقعی API سرورت تغییر بده
 RELEASE_API_URL = os.environ.get(
     "ROADMAPS_APP_RELEASE_API_URL",
-    "http://127.0.0.1:8000/latest.json"
+    "https://roadmaps.ir/api/v1/roadmapsapp/releases/latest/"
 )
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -115,6 +113,8 @@ class AppUpdater:
             request = urllib.request.Request(RELEASE_API_URL, headers={'User-Agent': 'RoadMaps-App-Updater/1.0'})
             with urllib.request.urlopen(request, timeout=15) as response:
                 payload = json.loads(response.read().decode('utf-8'))
+            if not isinstance(payload, dict):
+                raise ValueError('Release API response must be a JSON object.')
         except Exception as exc:
             return {
                 'has_update': False,
@@ -123,6 +123,7 @@ class AppUpdater:
                 'is_force_update': False,
                 'download_url': '',
                 'changelog': '',
+                'sha256': '',
                 'error': str(exc),
             }
 
@@ -133,15 +134,18 @@ class AppUpdater:
                 payload.get('force_update', payload.get('required', False)),
             )
         )
+        download_url = payload.get('download_url', '') or ''
+        if isinstance(download_url, str) and download_url.startswith('/'):
+            download_url = f'https://roadmaps.ir{download_url}'
         return {
             'has_update': _is_newer_version(current_version, latest_version),
             'current_version': current_version,
             'latest_version': latest_version,
             'is_force_update': is_force_update,
             'update_type': 'forced' if is_force_update else 'optional',
-            'download_url': payload.get('download_url', ''),
+            'download_url': download_url,
             'changelog': payload.get('changelog', ''),
-            'sha256': payload.get('sha256', ''),
+            'sha256': payload.get('file_hash', ''),
             'error': None,
         }
 

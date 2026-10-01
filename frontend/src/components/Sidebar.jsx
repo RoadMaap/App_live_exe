@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { callOptionalEel } from '../services/eelApi';
 
 /**
  * Sidebar Component
@@ -8,6 +9,22 @@ import { useLanguage } from '../context/LanguageContext';
  */
 const Sidebar = ({ status, activeTab, onTabChange }) => {
     const { t, lang } = useLanguage();
+    const [appVersion, setAppVersion] = useState('0.0.0');
+
+    useEffect(() => {
+        let isMounted = true;
+
+        callOptionalEel('get_app_version').then((versionInfo) => {
+            const version = versionInfo?.version;
+            if (isMounted && typeof version === 'string' && version.trim()) {
+                setAppVersion(version.trim());
+            }
+        });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Determine the layout direction based on the current language
     const isRtl = lang === 'fa';
@@ -89,7 +106,7 @@ const Sidebar = ({ status, activeTab, onTabChange }) => {
                         </h1>
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className="px-2 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-700 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                                {t('version') || 'v2.5.0'}
+                                {lang === 'fa' ? 'نسخه' : 'Version'} v{appVersion}
                             </span>
                         </div>
                     </div>
